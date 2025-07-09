@@ -145,4 +145,35 @@ class OrdenProduccionController extends Controller
 
         return redirect()->route('ordenes.index')->with('success', 'Orden creada con sus productos, entregas y etapas correctamente.');
     }
+
+    public function productosDeOrden($id)
+    {
+        $orden = \App\Models\OrdenProduccion::with('items.producto')->findOrFail($id);
+
+        $productos = $orden->items->map(function ($item) {
+            $precio = $item->producto->precio ?? 0;
+            $cantidad = $item->cantidad ?? 0;
+
+            return [
+                'nombre' => $item->producto->nombre ?? $item->nombre ?? 'Producto sin nombre',
+                'precio' => $precio,
+                'cantidad' => $cantidad,
+                'subtotal' => $precio * $cantidad,
+            ];
+        });
+
+        return response()->json($productos);
+    }
+
+    public function itemsJson($id)
+{
+    $orden = \App\Models\OrdenProduccion::with('items')->findOrFail($id);
+    return response()->json(
+        $orden->items->map(fn($item) => [
+            'id' => $item->id,
+            'nombre' => $item->nombre,
+        ])
+    );
+}
+
 }

@@ -14,22 +14,16 @@
                         <select name="orden_id" class="form-select" required>
                             <option value="">Seleccione una orden</option>
                             @foreach($ordenes as $orden)
-                                <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
+                            <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Revisado por</label>
-                        <select name="revisado_por" class="form-select" required>
-                            <option value="">Seleccione</option>
-                            <option value="Dulce">Dulce</option>
-                            <option value="Hiromi">Hiromi</option>
-                            <option value="Andrea">Andrea</option>
-                            <option value="Xonat">Xonat</option>
-                            <option value="Dulce 2">Dulce 2</option>
-                        </select>
+                        <input type="text" name="revisado_por" class="form-control" placeholder="Nombre de quien revisó" required>
                     </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">Cantidad revisada</label>
@@ -42,7 +36,7 @@
                             <option value="">Seleccione tipo</option>
                             <option value="correcta">✅ Correcta</option>
                             <option value="defectos">⚠️ Defectos pero sirve</option>
-                            <option value="apartada">🟠 Apartada</option>
+                            <option value="apartada">🟠 Pausada a la espera de aprobación</option>
                             <option value="rechazada">❌ Rechazada</option>
                         </select>
                     </div>

@@ -17,7 +17,7 @@
                         <select name="orden_id" class="form-select" required>
                             <option value="">Seleccione una orden</option>
                             @foreach($ordenes as $orden)
-                                <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
+                            <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -28,18 +28,8 @@
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">💰 Precio por Unidad</label>
-                        <input type="number" name="costo_unitario" step="0.01" class="form-control" placeholder="Ej: 1200.50">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">🧾 Precio Total Estimado</label>
-                        <input type="text" id="total_estimado" class="form-control bg-light" readonly placeholder="$0.00">
-                        <input type="hidden" name="total" id="total_hidden">
-                    </div>
-                </div>
+                {{-- Productos asociados --}}
+                <div id="productosOrden" class="mt-3"></div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -58,8 +48,8 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Método de entrega</label>
-                    <input type="text" name="metodo_entrega" class="form-control" placeholder="Transporte, envío, recogida...">
+                    <label class="form-label">Comentarios</label>
+                    <input type="text" name="metodo_entrega" class="form-control" placeholder="Observaciones o notas adicionales...">
                 </div>
 
                 <div class="text-end">
@@ -73,16 +63,73 @@
 </div>
 
 <script>
-    document.querySelector('input[name="cantidad_final"]').addEventListener('input', calcularTotal);
-    document.querySelector('input[name="costo_unitario"]').addEventListener('input', calcularTotal);
+    // Mostrar productos de la orden seleccionada
+    document.querySelector('select[name="orden_id"]').addEventListener('change', function() {
+        const ordenId = this.value;
+        const productosDiv = document.getElementById('productosOrden');
+        productosDiv.innerHTML = '';
 
-    function calcularTotal() {
-        const cantidad = parseFloat(document.querySelector('input[name="cantidad_final"]').value) || 0;
-        const costo = parseFloat(document.querySelector('input[name="costo_unitario"]').value) || 0;
-        const total = cantidad * costo;
+        if (!ordenId) return;
 
-        document.getElementById('total_estimado').value = "$" + total.toFixed(2);
-        document.getElementById('total_hidden').value = total.toFixed(2);
-    }
+        fetch(`/ordenes/${ordenId}/productos-json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length === 0) {
+                    productosDiv.innerHTML = `<div class="alert alert-warning mt-2">No hay productos asociados a esta orden.</div>`;
+                    return;
+                }
+
+                let html = `
+        <div class="card mt-3">
+            <div class="card-header bg-light fw-semibold">🧾 Productos de la Orden</div>
+            <ul class="list-group list-group-flush">
+    `;
+
+                let total = 0;
+                let sumaCantidad = 0;
+
+                data.forEach(producto => {
+                    const precio = parseFloat(producto.precio) || 0;
+                    const cantidad = parseFloat(producto.cantidad) || 0;
+                    const subtotal = parseFloat(producto.subtotal) || 0;
+
+                    total += subtotal;
+                    sumaCantidad += cantidad;
+
+                    html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${producto.nombre}</strong><br>
+                    <small class="text-muted">Cantidad: ${cantidad}</small>
+                </div>
+                <div class="text-end">
+                    <div>$${precio.toFixed(2)} c/u</div>
+                    <small class="text-muted">Subtotal: $${subtotal.toFixed(2)}</small>
+                </div>
+            </li>
+        `;
+                });
+
+                html += `
+            </ul>
+            <div class="card-footer text-end fw-bold">
+                Total Estimado: $${total.toFixed(2)}
+            </div>
+        </div>
+    `;
+
+                productosDiv.innerHTML = html;
+
+                // ✅ Asignar cantidad total automáticamente
+                const cantidadInput = document.querySelector('input[name="cantidad_final"]');
+                cantidadInput.value = sumaCantidad;
+
+            })
+
+            .catch(() => {
+                productosDiv.innerHTML = `<div class="alert alert-danger mt-2">Error al cargar los productos.</div>`;
+            });
+    });
 </script>
+
 @endsection

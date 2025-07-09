@@ -85,7 +85,7 @@
     </script>
 
     <script>
-        $(document).ready(function () {
+        $(document).ready(function() {
             console.log("🚀 Script cargado y listo");
 
             $.ajaxSetup({
@@ -96,20 +96,26 @@
 
             $('#formNuevoProducto').on('submit', function(e) {
                 e.preventDefault();
-                console.log("📤 Enviando producto...");
+                console.log("📤 Enviando producto con imagen y precio...");
 
-                const form = $(this);
-                const data = form.serialize();
+                const form = $(this)[0];
+                const formData = new FormData(form);
 
-                form.find('.is-invalid').removeClass('is-invalid');
-                form.find('.invalid-feedback').remove();
+                const $form = $(this);
+                $form.find('.is-invalid').removeClass('is-invalid');
+                $form.find('.invalid-feedback').remove();
 
-                $.post("{{ route('productos.store') }}", data)
-                    .done(function(producto) {
+                $.ajax({
+                    url: "{{ route('productos.store') }}",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(producto) {
                         console.log("✅ Producto creado:", producto);
                         productos.push(producto);
 
-                        $('.select2-producto').each(function () {
+                        $('.select2-producto').each(function() {
                             const select = $(this);
                             const option = new Option(producto.codigo, producto.id, false, false);
                             $(option).attr('data-nombre', producto.nombre);
@@ -117,9 +123,9 @@
                         });
 
                         $('#modalProducto').modal('hide');
-                        form[0].reset();
-                    })
-                    .fail(function(xhr) {
+                        $form[0].reset();
+                    },
+                    error: function(xhr) {
                         console.warn("❌ Error al guardar producto:", xhr);
                         if (xhr.status === 422) {
                             const errors = xhr.responseJSON.errors;
@@ -131,32 +137,33 @@
                         } else {
                             alert('Error inesperado. Revisa la consola.');
                         }
-                    });
+                    }
+                });
             });
         });
     </script>
 
     <script>
-    let index = 1;
+        let index = 1;
 
-    @isset($productos)
-    const productos = @json($productos);
-    @else
-    const productos = [];
-    @endisset
+        @isset($productos)
+        const productos = @json($productos);
+        @else
+        const productos = [];
+        @endisset
 
-    function addItem() {
-        const container = document.getElementById('items');
-        const row = document.createElement('div');
-        row.className = 'producto-item row g-3 mb-4';
-        row.dataset.index = index;
+        function addItem() {
+            const container = document.getElementById('items');
+            const row = document.createElement('div');
+            row.className = 'producto-item row g-3 mb-4';
+            row.dataset.index = index;
 
-        let options = `<option value="">-- Selecciona código --</option>`;
-        productos.forEach(p => {
-            options += `<option value="${p.id}" data-nombre="${p.nombre}">${p.codigo}</option>`;
-        });
+            let options = `<option value="">-- Selecciona código --</option>`;
+            productos.forEach(p => {
+                options += `<option value="${p.id}" data-nombre="${p.nombre}">${p.codigo}</option>`;
+            });
 
-        row.innerHTML = `
+            row.innerHTML = `
             <div class="col-md-4">
                 <label class="form-label">Código</label>
                 <select name="items[${index}][producto_id]" class="form-select select2-producto" data-index="${index}" required>
@@ -195,21 +202,21 @@
             </div>
         `;
 
-        container.appendChild(row);
-        $(`.select2-producto[data-index="${index}"]`).select2();
-        index++;
-    }
+            container.appendChild(row);
+            $(`.select2-producto[data-index="${index}"]`).select2();
+            index++;
+        }
 
-    function addEntrega(button) {
-        const entregasDiv = button.previousElementSibling;
-        const itemIndex = entregasDiv.dataset.itemIndex;
-        const entregaIndex = entregasDiv.querySelectorAll('.entrega-row').length;
+        function addEntrega(button) {
+            const entregasDiv = button.previousElementSibling;
+            const itemIndex = entregasDiv.dataset.itemIndex;
+            const entregaIndex = entregasDiv.querySelectorAll('.entrega-row').length;
 
-        const entregaRow = document.createElement('div');
-        entregaRow.className = 'row entrega-row g-2 mb-2';
-        entregaRow.dataset.entregaIndex = entregaIndex;
+            const entregaRow = document.createElement('div');
+            entregaRow.className = 'row entrega-row g-2 mb-2';
+            entregaRow.dataset.entregaIndex = entregaIndex;
 
-        entregaRow.innerHTML = `
+            entregaRow.innerHTML = `
             <div class="col-md-5">
                 <input type="date" class="form-control" name="items[${itemIndex}][entregas][${entregaIndex}][fecha]" required>
             </div>
@@ -223,59 +230,62 @@
             </div>
         `;
 
-        entregasDiv.appendChild(entregaRow);
-    }
+            entregasDiv.appendChild(entregaRow);
+        }
 
-    function removeEntrega(button) {
-        const row = button.closest('.entrega-row');
-        row.remove();
-    }
+        function removeEntrega(button) {
+            const row = button.closest('.entrega-row');
+            row.remove();
+        }
 
-    $(document).on('change', '.select2-producto', function () {
-        const selected = $(this).find('option:selected');
-        const nombre = selected.data('nombre') || '';
-        const idx = $(this).data('index');
-        $(`div[data-index="${idx}"] .nombre-producto`).val(nombre);
-    });
+        $(document).on('change', '.select2-producto', function() {
+            const selected = $(this).find('option:selected');
+            const nombre = selected.data('nombre') || '';
+            const idx = $(this).data('index');
+            $(`div[data-index="${idx}"] .nombre-producto`).val(nombre);
+        });
 
-    $(document).ready(function () {
-        $('.select2').select2();
-        $('.select2-producto').select2();
-    });
-</script>
+        $(document).ready(function() {
+            $('.select2').select2();
+            $('.select2-producto').select2();
+        });
+    </script>
 
     <script>
-    document.querySelectorAll('.estado-insumo').forEach(select => {
-        select.addEventListener('change', function () {
-            const id = this.dataset.id;
-            const estado = this.value;
+        document.querySelectorAll('.estado-insumo').forEach(select => {
+            select.addEventListener('change', function() {
+                const id = this.dataset.id;
+                const estado = this.value;
 
-            fetch(`/insumos-orden/${id}/estado`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ estado })
-            }).then(res => res.json())
-              .then(data => {
-                  if (data.success) {
-                      alert('✅ Estado actualizado');
-                  } else {
-                      alert('⚠️ No se pudo actualizar');
-                  }
-              });
+                fetch(`/insumos-orden/${id}/estado`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            estado
+                        })
+                    }).then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Estado actualizado');
+                        } else {
+                            alert('⚠️ No se pudo actualizar');
+                        }
+                    });
+            });
         });
-    });
-</script>
-<script>
-    $(document).ready(function () {
-        $('.select-insumo').select2({
-            width: '100%',
-            placeholder: "Seleccione un insumo",
-            allowClear: true
+    </script>
+    <script>
+        $(document).ready(function() {
+            $('.select-insumo').select2({
+                width: '100%',
+                placeholder: "Seleccione un insumo",
+                allowClear: true
+            });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>

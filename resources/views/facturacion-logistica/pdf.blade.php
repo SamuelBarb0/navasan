@@ -170,37 +170,49 @@
         </table>
     </div>
 
-    <div class="section">
-        <h4>Resumen de Facturación</h4>
-        <table>
-            <tbody>
-                <tr>
-                    <td><strong>Cantidad Final Producida</strong></td>
-                    <td>{{ $factura->cantidad_final }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Costo por unidad</strong></td>
-                    <td>$ {{ number_format($factura->costo_unitario, 2) }}</td>
-                </tr>
-                <tr class="total">
-                    <td><strong>Total Facturado</strong></td>
-                    <td>$ {{ number_format($factura->total, 2) }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Estado Facturación</strong></td>
-                    <td>{{ ucfirst($factura->estado_facturacion) }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Fecha de Entrega</strong></td>
-                    <td>{{ \Carbon\Carbon::parse($factura->fecha_entrega)->format('d/m/Y') }}</td>
-                </tr>
-                <tr>
-                    <td><strong>Método de Entrega</strong></td>
-                    <td>{{ $factura->metodo_entrega }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+   @php
+    $totalCalculado = 0;
+@endphp
+
+@foreach($factura->orden->items as $item)
+    @php
+        $precio = $item->producto->precio ?? 0;
+        $subtotal = $precio * $item->cantidad;
+        $totalCalculado += $subtotal;
+    @endphp
+@endforeach
+
+<div class="section">
+    <h4>Resumen de Facturación</h4>
+    <table>
+        <tbody>
+            <tr>
+                <td><strong>Cantidad Final Producida</strong></td>
+                <td>{{ $factura->cantidad_final }}</td>
+            </tr>
+            <tr>
+                <td><strong>Total Calculado por Productos</strong></td>
+                <td>$ {{ number_format($totalCalculado, 2) }}</td>
+            </tr>
+            <tr class="total">
+                <td><strong>Total Facturado</strong></td>
+                <td>$ {{ number_format($totalCalculado, 2) }}</td>
+            </tr>
+            <tr>
+                <td><strong>Estado Facturación</strong></td>
+                <td>{{ ucfirst($factura->estado_facturacion) }}</td>
+            </tr>
+            <tr>
+                <td><strong>Fecha de Entrega</strong></td>
+                <td>{{ \Carbon\Carbon::parse($factura->fecha_entrega)->format('d/m/Y') }}</td>
+            </tr>
+            <tr>
+                <td><strong>Comentarios</strong></td>
+                <td>{{ $factura->metodo_entrega }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
 </body>
 </html>

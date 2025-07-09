@@ -46,6 +46,8 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/ordenes', [OrdenProduccionController::class, 'index'])->name('ordenes.index');
     Route::get('/ordenes/{orden}', [OrdenProduccionController::class, 'show'])->name('ordenes.show');
+    Route::get('/ordenes/{orden}/productos-json', [OrdenProduccionController::class, 'productosDeOrden']);
+    Route::get('/ordenes/{orden}/items-json', [OrdenProduccionController::class, 'itemsJson']);
 });
 
 Route::middleware(['auth'])->group(function () {

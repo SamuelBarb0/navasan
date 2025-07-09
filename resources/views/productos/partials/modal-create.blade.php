@@ -1,7 +1,7 @@
 <div class="modal fade" id="modalProducto" tabindex="-1" aria-labelledby="modalProductoLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content rounded-4 shadow-sm">
-      <form id="formNuevoProducto">
+      <form id="formNuevoProducto" enctype="multipart/form-data">
         <div class="modal-header text-white rounded-top-4" style="background-color: #16509D;">
           <h5 class="modal-title" id="modalProductoLabel">
             <i class="bi bi-box-seam me-2"></i> Crear Producto
@@ -10,27 +10,40 @@
         </div>
 
         <div class="modal-body" style="background-color: #f9fbfd;">
-            @csrf
+          @csrf
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
-                <input type="text" name="codigo" class="form-control" required style="border-color: #7CB9E6;" placeholder="Ej. PROD-001">
-            </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
+            <input type="text" name="codigo" class="form-control" required style="border-color: #7CB9E6;" placeholder="Ej. PROD-001">
+          </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
-                <input type="text" name="nombre" class="form-control" required style="border-color: #7CB9E6;" placeholder="Nombre del producto">
-            </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control" required style="border-color: #7CB9E6;" placeholder="Nombre del producto">
+          </div>
 
-            <div class="mb-3">
-                <label class="form-label">Presentación</label>
-                <input type="text" name="presentacion" class="form-control" placeholder="Ej. Caja, Bolsa, Rollo">
-            </div>
+          <div class="mb-3">
+            <label class="form-label">Presentación</label>
+            <input type="text" name="presentacion" class="form-control" placeholder="Ej. Caja, Bolsa, Rollo">
+          </div>
 
-            <div class="mb-3">
-                <label class="form-label">Unidad</label>
-                <input type="text" name="unidad" class="form-control" placeholder="Ej. cm, ml, unidades">
-            </div>
+          <div class="mb-3">
+            <label class="form-label">Unidad</label>
+            <input type="text" name="unidad" class="form-control" placeholder="Ej. cm, ml, unidades">
+          </div>
+
+          @hasanyrole('logistica|administrador')
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Precio <span class="text-danger">*</span></label>
+            <input type="number" name="precio" step="0.01" class="form-control" required placeholder="Ej. 19.99">
+          </div>
+          @endhasanyrole
+
+
+          <div class="mb-3">
+            <label class="form-label">Imagen</label>
+            <input type="file" name="imagen" class="form-control" accept="image/*">
+          </div>
         </div>
 
         <div class="modal-footer bg-light rounded-bottom-4">

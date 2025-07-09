@@ -12,6 +12,14 @@
                 </div>
 
                 <div class="modal-body px-4 py-3">
+                    {{-- Producto --}}
+                    <div class="mb-3">
+                        <label class="form-label">Producto</label>
+                        <select name="item_orden_id" id="productoSelect{{ $etiqueta->id }}" class="form-select rounded-3" required>
+                            <option value="">Cargando productos...</option>
+                        </select>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Cantidad</label>
                         <input type="number" name="cantidad" class="form-control rounded-3" value="{{ $etiqueta->cantidad }}" required min="1">
@@ -25,6 +33,15 @@
                     <div class="mb-3">
                         <label class="form-label">Observaciones</label>
                         <textarea name="observaciones" class="form-control rounded-3" rows="2">{{ $etiqueta->observaciones }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select rounded-3" required>
+                            <option value="pendiente" {{ $etiqueta->estado === 'pendiente' ? 'selected' : '' }}>Pendiente</option>
+                            <option value="stock" {{ $etiqueta->estado === 'stock' ? 'selected' : '' }}>Stock</option>
+                            <option value="liberado" {{ $etiqueta->estado === 'liberado' ? 'selected' : '' }}>Liberado</option>
+                        </select>
                     </div>
 
                     <hr class="my-3">
@@ -54,3 +71,25 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ordenId = {{ $etiqueta->orden_id }};
+        const select = document.getElementById('productoSelect{{ $etiqueta->id }}');
+        const selectedId = {{ $etiqueta->item_orden_id ?? 'null' }};
+
+        fetch(`/ordenes/${ordenId}/items-json`)
+            .then(res => res.json())
+            .then(items => {
+                let options = '<option value="">Seleccione un producto</option>';
+                items.forEach(item => {
+                    const selected = item.id === selectedId ? 'selected' : '';
+                    options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
+                });
+                select.innerHTML = options;
+            })
+            .catch(() => {
+                select.innerHTML = '<option value="">Error al cargar productos</option>';
+            });
+    });
+</script>

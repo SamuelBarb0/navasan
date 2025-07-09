@@ -60,7 +60,12 @@ $esAdmin = $usuario->hasRole('administrador');
                         @foreach($orden->items as $index => $item)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td>{{ $item->nombre }}</td>
+                            <td class="d-flex align-items-center gap-2">
+                                @if($item->producto?->imagen)
+                                <img src="{{ asset('storage/' . $item->producto->imagen) }}" alt="img" width="100" height="100" class="rounded border">
+                                @endif
+                                <span>{{ $item->producto->nombre ?? $item->nombre }}</span>
+                            </td>
                             <td>{{ $item->cantidad }}</td>
                             <td>
                                 @if($item->entregas && $item->entregas->count())

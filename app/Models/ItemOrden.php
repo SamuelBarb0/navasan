@@ -11,6 +11,7 @@ class ItemOrden extends Model
         'orden_produccion_id',
         'nombre',
         'cantidad',
+        'producto_id',
     ];
 
     public function ordenProduccion()

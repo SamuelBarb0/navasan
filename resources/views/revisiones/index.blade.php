@@ -1,5 +1,12 @@
 @extends('layouts.app')
 
+<style>
+    .bg-orange-custom {
+        background-color: #f7931e !important;
+        color: #fff;
+    }
+</style>
+
 @section('content')
 <div class="container mt-5">
     <div class="card border-0 shadow-sm rounded-4">
@@ -36,21 +43,21 @@
                     <tbody>
                         @foreach($revisiones as $rev)
                         @php
-                        $badge = match($rev->tipo) {
+                        $badgeClass = match($rev->tipo) {
                         'correcta' => 'success',
                         'defectos' => 'warning',
-                        'apartada' => 'orange',
+                        'apartada' => 'apartada-custom', // clase personalizada
                         'rechazada' => 'danger',
                         default => 'secondary'
                         };
                         @endphp
                         <tr class="text-center">
                             <td>{{ $rev->orden->numero_orden ?? '—' }}</td>
-                            <td>{{ $rev->usuario }}</td>
+                            <td>{{ $rev->revisado_por }}</td>
                             <td>{{ $rev->cantidad }}</td>
                             <td>
-                                <span class="badge bg-{{ $badge }} text-capitalize">
-                                    {{ ucfirst($rev->tipo) }}
+                                <span class="badge {{ $rev->tipo === 'apartada' ? 'bg-orange-custom text-white' : 'bg-' . $badgeClass }}">
+                                    {{ $rev->tipo === 'apartada' ? 'Pausada a la espera de aprobación' : ucfirst($rev->tipo) }}
                                 </span>
                             </td>
                             <td>{{ $rev->comentarios ?? '—' }}</td>
