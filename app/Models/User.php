@@ -46,4 +46,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function etapasAsignadas()
+    {
+        return $this->hasMany(\App\Models\OrdenEtapa::class, 'usuario_id');
+    }
 }

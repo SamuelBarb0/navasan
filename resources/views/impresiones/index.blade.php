@@ -46,7 +46,7 @@
                                     ];
                                 @endphp
                                 <tr class="text-center">
-                                    <td>#{{ $item->orden_id }}</td>
+                                    <td>#{{ $item->orden->numero_orden ?? '—' }}</td>
                                     <td>{{ $item->tipo_impresion }}</td>
                                     <td>{{ $item->maquina }}</td>
                                     <td>{{ $item->cantidad_pliegos }}</td>

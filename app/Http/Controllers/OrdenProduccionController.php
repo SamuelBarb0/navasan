@@ -8,30 +8,76 @@ use App\Models\ItemOrden;
 use App\Models\EtapaProduccion;
 use App\Models\OrdenEtapa;
 use App\Models\ItemEntrega;
+use Illuminate\Support\Facades\Auth;
 
 
 use Illuminate\Http\Request;
 
 class OrdenProduccionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $ordenes = \App\Models\OrdenProduccion::with('cliente')->orderBy('created_at', 'desc')->get();
-        return view('ordenes.index', compact('ordenes'));
+        $busqueda = $request->input('busqueda');
+        $usuario = auth()->user();
+        $esAdmin = $usuario->hasRole('administrador'); // ← aquí usamos Spatie correctamente
+
+        // Órdenes normales
+        $ordenes = \App\Models\OrdenProduccion::with('cliente')
+            ->when($busqueda, function ($query) use ($busqueda) {
+                $query->where(function ($sub) use ($busqueda) {
+                    $sub->where('numero_orden', 'like', "%$busqueda%")
+                        ->orWhereHas('items.producto', function ($q) use ($busqueda) {
+                            $q->where('codigo', 'like', "%$busqueda%");
+                        });
+                });
+            })
+            ->when(!$esAdmin, function ($query) use ($usuario) {
+                $query->whereHas('etapas', function ($q) use ($usuario) {
+                    $q->where('usuario_id', $usuario->id);
+                });
+            })
+            ->where(function ($q) {
+                $q->where('urgente', false)->orWhereNull('urgente');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Devoluciones urgentes
+        $devoluciones = \App\Models\OrdenProduccion::with('cliente')
+            ->where('urgente', true)
+            ->when($busqueda, function ($query) use ($busqueda) {
+                $query->where(function ($sub) use ($busqueda) {
+                    $sub->where('numero_orden', 'like', "%$busqueda%")
+                        ->orWhereHas('items.producto', function ($q) use ($busqueda) {
+                            $q->where('codigo', 'like', "%$busqueda%");
+                        });
+                });
+            })
+            ->when(!$esAdmin, function ($query) use ($usuario) {
+                $query->whereHas('etapas', function ($q) use ($usuario) {
+                    $q->where('usuario_id', $usuario->id);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('ordenes.index', compact('ordenes', 'devoluciones', 'esAdmin'));
     }
 
     public function show($id)
     {
         $orden = \App\Models\OrdenProduccion::with([
             'cliente',
-            'items.entregas',     // ← importante si quieres ver entregas también
+            'items.entregas',
             'etapas.etapa',
             'etapas.usuario'
         ])->findOrFail($id);
-        
-        return view('ordenes.show', compact('orden'));
-    }
 
+        $usuario = auth()->user();
+        $esAdmin = $usuario->hasRole('administrador');
+
+        return view('ordenes.show', compact('orden', 'usuario', 'esAdmin'));
+    }
 
 
     public function create()

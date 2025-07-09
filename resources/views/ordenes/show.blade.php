@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+
+@php
+$usuario = auth()->user();
+$esAdmin = $usuario->hasRole('administrador');
+@endphp
+
 <div class="container mt-5">
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header text-white d-flex justify-content-between align-items-center rounded-top-4" style="background-color: #16509D;">
@@ -107,6 +113,7 @@
                             'rechazado' => 'danger',
                             default => 'dark'
                             };
+                            $puedeGestionar = $esAdmin || $etapa->usuario_id === $usuario->id;
                             @endphp
                             <tr>
                                 <td>{{ $etapa->etapa?->nombre ?? '—' }}</td>
@@ -120,6 +127,7 @@
                                 <td>{{ $etapa->fin ? \Carbon\Carbon::parse($etapa->fin)->format('d/m/Y H:i') : '—' }}</td>
                                 <td>{{ $etapa->observaciones ?? '—' }}</td>
                                 <td>
+                                    @if($puedeGestionar)
                                     @if($etapa->estado === 'pendiente')
                                     <form action="{{ route('orden_etapas.iniciar', $etapa->id) }}" method="POST">
                                         @csrf @method('PATCH')
@@ -140,6 +148,9 @@
                                     @else
                                     <span class="text-muted">—</span>
                                     @endif
+                                    @else
+                                    <span class="text-muted">—</span>
+                                    @endif
                                 </td>
                             </tr>
                             @endforeach
@@ -149,103 +160,110 @@
                 @endif
             </div>
 
-            {{-- Insumos requeridos --}}
-            <div class="mt-5">
-                <h5 class="text-primary"><i class="bi bi-droplet-half me-1"></i> Insumos Requeridos</h5>
-
-                @if($orden->insumos->isEmpty())
-                <div class="alert alert-warning mt-3">No se han asignado insumos a esta orden.</div>
-                @else
-                <div class="table-responsive mt-3">
-                    <table class="table table-bordered align-middle shadow-sm">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Insumo</th>
-                                <th>Cantidad Requerida</th>
-                                <th>Estado</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($orden->insumos as $insumo)
-                            <tr>
-                                <td>{{ $insumo->insumo->nombre }}</td>
-                                <td>{{ $insumo->cantidad_requerida }}</td>
-                                <td>
-                                    <span class="badge bg-{{ match($insumo->estado) {
-                                'pendiente' => 'secondary',
-                                'liberado' => 'success',
-                                'solicitado' => 'warning',
-                                default => 'dark'
-                            } }}">
-                                        {{ ucfirst($insumo->estado) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <form action="{{ route('insumo_orden.actualizar_estado', $insumo->id) }}" method="POST" class="d-flex">
-                                        @csrf @method('PATCH')
-                                        <select name="estado" class="form-select form-select-sm me-2" required>
-                                            <option value="pendiente" {{ $insumo->estado === 'pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                            <option value="liberado" {{ $insumo->estado === 'liberado' ? 'selected' : '' }}>Liberado</option>
-                                            <option value="solicitado" {{ $insumo->estado === 'solicitado' ? 'selected' : '' }}>Solicitado</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-save"></i> Guardar
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @endif
-            </div>
-
-            @if($orden->estado !== 'completado')
+            @if($orden->insumos->isNotEmpty())
             <hr class="my-4">
 
-            <h6 class="text-primary mb-3">
-                <i class="bi bi-droplet-half text-danger"></i>
-                Asignar nuevo insumo
-            </h6>
+            <h5 class="text-primary mb-3">
+                <i class="bi bi-box-seam"></i> Insumos requeridos para esta orden
+            </h5>
 
-            <div class="bg-white p-3 rounded shadow-sm border">
-                <form action="{{ route('ordenes.insumos.agregar', $orden->id) }}" method="POST" class="row align-items-end g-3">
-                    @csrf
-
-                    <div class="col-md-5">
-                        <label for="insumo_id" class="form-label fw-bold">Insumo existente</label>
-                        <select name="insumo_id" id="insumo_id" class="form-select select-insumo" required>
-                            <option value="">Seleccione un insumo</option>
-                            @foreach(\App\Models\Insumo::all() as $insumo)
-                            <option value="{{ $insumo->id }}">{{ $insumo->nombre }} ({{ $insumo->unidad }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cantidad_requerida" class="form-label fw-bold">Cantidad requerida</label>
-                        <input type="number" name="cantidad_requerida" id="cantidad_requerida" class="form-control" required min="1">
-                    </div>
-
-                    <div class="col-md-2 d-grid">
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle"></i> Agregar
-                        </button>
-                    </div>
-
-                    <div class="col-md-2 d-grid">
-                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInsumo">
-                            <i class="bi bi-plus"></i> Nuevo insumo
-                        </button>
-                    </div>
-                </form>
+            <div class="table-responsive mt-2">
+                <table class="table table-bordered align-middle shadow-sm">
+                    <thead class="table-light">
+                        <tr class="text-center">
+                            <th>Insumo</th>
+                            <th>Cantidad Requerida</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($orden->insumos as $insumo)
+                        <tr class="text-center">
+                            <td>{{ $insumo->insumo->nombre }}</td>
+                            <td>{{ $insumo->cantidad_requerida }}</td>
+                            <td>
+                                <span class="badge bg-{{ match($insumo->estado) {
+                            'pendiente' => 'secondary',
+                            'liberado' => 'success',
+                            'solicitado' => 'warning',
+                            default => 'dark'
+                        } }}">
+                                    {{ ucfirst($insumo->estado) }}
+                                </span>
+                            </td>
+                            <td>
+                                @hasanyrole('almacen|administrador')
+                                <form action="{{ route('insumo_orden.actualizar_estado', $insumo->id) }}" method="POST" class="d-flex justify-content-center">
+                                    @csrf @method('PATCH')
+                                    <select name="estado" class="form-select form-select-sm me-2" required>
+                                        <option value="pendiente" {{ $insumo->estado === 'pendiente' ? 'selected' : '' }}>Pendiente</option>
+                                        <option value="liberado" {{ $insumo->estado === 'liberado' ? 'selected' : '' }}>Liberado</option>
+                                        <option value="solicitado" {{ $insumo->estado === 'solicitado' ? 'selected' : '' }}>Solicitado</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </form>
+                                @else
+                                <span class="text-muted">Solo lectura</span>
+                                @endhasanyrole
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
             @endif
+        </div>
+
+        @if($orden->estado !== 'completado')
+        @hasanyrole('preprensa|administrador')
+        <hr class="my-4">
+
+        <h6 class="text-primary mb-3">
+            <i class="bi bi-droplet-half text-danger"></i>
+            Asignar nuevo insumo
+        </h6>
+
+        <div class="bg-white p-3 rounded shadow-sm border">
+            <form action="{{ route('ordenes.insumos.agregar', $orden->id) }}" method="POST" class="row align-items-end g-3">
+                @csrf
+
+                <div class="col-md-5">
+                    <label for="insumo_id" class="form-label fw-bold">Insumo existente</label>
+                    <select name="insumo_id" id="insumo_id" class="form-select select-insumo" required>
+                        <option value="">Seleccione un insumo</option>
+                        @foreach(\App\Models\Insumo::all() as $insumo)
+                        <option value="{{ $insumo->id }}">{{ $insumo->nombre }} ({{ $insumo->unidad }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="cantidad_requerida" class="form-label fw-bold">Cantidad requerida</label>
+                    <input type="number" name="cantidad_requerida" id="cantidad_requerida" class="form-control" required min="1">
+                </div>
+
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Agregar
+                    </button>
+                </div>
+
+                <div class="col-md-2 d-grid">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInsumo">
+                        <i class="bi bi-plus"></i> Nuevo insumo
+                    </button>
+                </div>
+            </form>
+        </div>
+        @endhasanyrole
+        @endif
 
 
-            @include('partials.crear-insumo')
+
+        @include('partials.crear-insumo')
 
 
-            @endsection
+        @endsection

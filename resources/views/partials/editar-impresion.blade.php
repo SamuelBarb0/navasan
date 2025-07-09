@@ -16,7 +16,7 @@
                         <select name="orden_id" class="form-select" required>
                             @foreach(\App\Models\OrdenProduccion::all() as $orden)
                                 <option value="{{ $orden->id }}" {{ $orden->id == $item->orden_id ? 'selected' : '' }}>
-                                    Orden #{{ $orden->id }}
+                                    {{ $orden->numero_orden }}
                                 </option>
                             @endforeach
                         </select>

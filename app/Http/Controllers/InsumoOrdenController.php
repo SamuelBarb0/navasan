@@ -16,11 +16,38 @@ class InsumoOrdenController extends Controller
         ]);
 
         $insumoOrden = InsumoOrden::findOrFail($id);
-        $insumoOrden->estado = $request->estado;
+        $inventario = InventarioInsumo::where('insumo_id', $insumoOrden->insumo_id)->first();
+
+        $estadoAnterior = $insumoOrden->estado;
+        $cantidadAnterior = $insumoOrden->cantidad_requerida;
+        $nuevoEstado = $request->estado;
+
+        // 1. Si estaba liberado, devolver al inventario
+        if ($estadoAnterior === 'liberado' && $inventario) {
+            $inventario->cantidad_disponible += $cantidadAnterior;
+        }
+
+        // 2. Si se quiere liberar de nuevo
+        if ($nuevoEstado === 'liberado') {
+            if ($inventario && $inventario->cantidad_disponible >= $cantidadAnterior) {
+                $inventario->cantidad_disponible -= $cantidadAnterior;
+                $insumoOrden->estado = 'liberado';
+            } else {
+                return back()->with('error', 'Inventario insuficiente para liberar este insumo.');
+            }
+        } else {
+            $insumoOrden->estado = $nuevoEstado;
+        }
+
+        if ($inventario) {
+            $inventario->save();
+        }
+
         $insumoOrden->save();
 
-        return redirect()->back()->with('success', 'Estado del insumo actualizado.');
+        return redirect()->back()->with('success', 'Estado del insumo actualizado correctamente.');
     }
+
 
     public function store(Request $request, $ordenId)
     {
@@ -33,20 +60,6 @@ class InsumoOrdenController extends Controller
             'factura_archivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
 
-        $insumoId = $request->insumo_id;
-        $cantidad = $request->cantidad_requerida;
-        $estado = 'pendiente';
-
-        // Verificamos inventario
-        $inventario = InventarioInsumo::where('insumo_id', $insumoId)->first();
-        if ($inventario && $inventario->cantidad_disponible >= $cantidad) {
-            $estado = 'liberado';
-            $inventario->cantidad_disponible -= $cantidad;
-            $inventario->save();
-        } else {
-            $estado = 'solicitado';
-        }
-
         $data = $request->only([
             'insumo_id',
             'cantidad_requerida',
@@ -56,7 +69,7 @@ class InsumoOrdenController extends Controller
         ]);
 
         $data['orden_produccion_id'] = $ordenId;
-        $data['estado'] = $estado;
+        $data['estado'] = 'pendiente'; // SIEMPRE iniciar como pendiente
 
         if ($request->hasFile('factura_archivo')) {
             $data['factura_archivo'] = $request->file('factura_archivo')->store('facturas', 'public');
@@ -66,6 +79,7 @@ class InsumoOrdenController extends Controller
 
         return back()->with('success', 'Insumo agregado correctamente.');
     }
+
 
     public function storeDesdeOrden(Request $request)
     {
@@ -125,34 +139,42 @@ class InsumoOrdenController extends Controller
             'tipo_recepcion' => 'nullable|string|max:50',
             'fecha_recepcion' => 'nullable|date',
             'factura_archivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'estado' => 'required|in:pendiente,liberado,solicitado',
         ]);
 
         $insumoOrden = InsumoOrden::findOrFail($id);
         $insumoId = $insumoOrden->insumo_id;
-
         $inventario = \App\Models\InventarioInsumo::where('insumo_id', $insumoId)->first();
+
+        $estadoAnterior = $insumoOrden->estado;
+        $cantidadAnterior = $insumoOrden->cantidad_requerida;
+
+        $nuevoEstado = $request->estado;
         $nuevaCantidad = $request->cantidad_requerida;
 
-        // Si se cambia la cantidad, se debe devolver la anterior al inventario
-        if ($inventario) {
-            // Devolver la anterior (si estaba liberado)
-            if ($insumoOrden->estado === 'liberado') {
-                $inventario->cantidad_disponible += $insumoOrden->cantidad_requerida;
-            }
-
-            // Verificar si ahora alcanza
-            if ($inventario->cantidad_disponible >= $nuevaCantidad) {
-                $insumoOrden->estado = 'liberado';
-                $inventario->cantidad_disponible -= $nuevaCantidad;
-            } else {
-                $insumoOrden->estado = 'solicitado';
-            }
-
-            $inventario->save();
-        } else {
-            $insumoOrden->estado = 'solicitado';
+        // 🔁 Si estaba liberado, devolver al inventario
+        if ($estadoAnterior === 'liberado' && $inventario) {
+            $inventario->cantidad_disponible += $cantidadAnterior;
         }
 
+        // ✅ Si se quiere liberar nuevamente, verificar stock
+        if ($nuevoEstado === 'liberado') {
+            if ($inventario && $inventario->cantidad_disponible >= $nuevaCantidad) {
+                $inventario->cantidad_disponible -= $nuevaCantidad;
+                $insumoOrden->estado = 'liberado';
+            } else {
+                return back()->with('error', 'Inventario insuficiente para liberar el insumo.');
+            }
+        } else {
+            // 👉 Si no se libera, asignar estado directo
+            $insumoOrden->estado = $nuevoEstado;
+        }
+
+        if ($inventario) {
+            $inventario->save();
+        }
+
+        // 📝 Actualizar resto de campos
         $insumoOrden->cantidad_requerida = $nuevaCantidad;
         $insumoOrden->cantidad_recibida = $request->cantidad_recibida;
         $insumoOrden->tipo_recepcion = $request->tipo_recepcion;

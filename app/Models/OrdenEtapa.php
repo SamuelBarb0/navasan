@@ -18,18 +18,16 @@ class OrdenEtapa extends Model
 
     public function orden()
     {
-        return $this->belongsTo(\App\Models\OrdenProduccion::class);
+        return $this->belongsTo(\App\Models\OrdenProduccion::class, 'orden_produccion_id');
     }
 
     public function etapa()
     {
-        return $this->belongsTo(\App\Models\EtapaProduccion::class);
+        return $this->belongsTo(\App\Models\EtapaProduccion::class, 'etapa_produccion_id');
     }
 
     public function usuario()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(\App\Models\User::class, 'usuario_id');
     }
-
-    
 }

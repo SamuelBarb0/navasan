@@ -25,7 +25,6 @@
                 <table class="table table-hover table-bordered align-middle shadow-sm">
                     <thead style="background-color: #7CB9E6;" class="text-dark">
                         <tr class="text-center">
-                            <th>#</th>
                             <th>Orden</th>
                             <th>Revisado por</th>
                             <th>Cantidad Revisada</th>
@@ -46,8 +45,7 @@
                         };
                         @endphp
                         <tr class="text-center">
-                            <td>{{ $rev->id }}</td>
-                            <td>#{{ $rev->orden_id }}</td>
+                            <td>{{ $rev->orden->numero_orden ?? '—' }}</td>
                             <td>{{ $rev->usuario }}</td>
                             <td>{{ $rev->cantidad }}</td>
                             <td>

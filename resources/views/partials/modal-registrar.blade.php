@@ -14,7 +14,7 @@
                         <select name="orden_id" class="form-select" required>
                             <option value="">Seleccione una orden</option>
                             @foreach($ordenes as $orden)
-                                <option value="{{ $orden->id }}">Orden #{{ $orden->id }}</option>
+                                <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
                             @endforeach
                         </select>
                     </div>

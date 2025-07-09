@@ -21,4 +21,16 @@ class EtapaProduccion extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'usuario_id');
     }
+
+    public function getAreaAttribute()
+    {
+        return match ($this->nombre) {
+            'Preprensa' => 'preprensa',
+            'Impresión' => 'impresion',
+            'Acabados' => 'acabados',
+            'Revisión' => 'revision',
+            'Logística' => 'logistica',
+            default => null,
+        };
+    }
 }

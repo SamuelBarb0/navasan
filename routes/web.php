@@ -1,62 +1,140 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\OrdenProduccionController;
-use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\InsumoOrdenController;
-use App\Http\Controllers\InsumoController;
-use App\Http\Controllers\ImpresionController;
-use App\Http\Controllers\AcabadoController;
-use App\Http\Controllers\RevisionController;
+use App\Http\Controllers\{
+    ProfileController,
+    OrdenProduccionController,
+    ClienteController,
+    ProductoController,
+    InsumoOrdenController,
+    InsumoController,
+    ImpresionController,
+    AcabadoController,
+    RevisionController,
+    FacturacionController,
+    InventarioEtiquetaController,
+    DevolucionController,
+    ReporteRevisadoController,
+    OrdenEtapaController
+};
 
-
+// Página de bienvenida
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('ordenes.index');
 });
 
+// Dashboard general
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return redirect()->route('ordenes.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+// Perfil de usuario
+Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/ordenes/create', [OrdenProduccionController::class, 'create'])->name('ordenes.create');
-    Route::post('/ordenes', [OrdenProduccionController::class, 'store'])->name('ordenes.store');
-    Route::get('/ordenes', [OrdenProduccionController::class, 'index'])->name('ordenes.index');
-    Route::get('/ordenes/{orden}', [OrdenProduccionController::class, 'show'])->name('ordenes.show');
-    Route::patch('/orden-etapas/{etapa}/iniciar', [\App\Http\Controllers\OrdenEtapaController::class, 'iniciar'])->name('orden_etapas.iniciar');
-    Route::patch('/orden-etapas/{etapa}/finalizar', [\App\Http\Controllers\OrdenEtapaController::class, 'finalizar'])->name('orden_etapas.finalizar');
-
-    Route::get('productos', [ProductoController::class, 'index'])->name('productos.index');
-    Route::get('productos/create', [ProductoController::class, 'create'])->name('productos.create');
-    Route::post('productos', [ProductoController::class, 'store'])->name('productos.store');
-
-    Route::post('/clientes/ajax-store', [ClienteController::class, 'ajaxStore'])->name('clientes.ajaxStore');
-    Route::resource('clientes', ClienteController::class)->except(['show']);
 });
 
-Route::patch('/insumos-orden/{id}/estado', [InsumoOrdenController::class, 'actualizarEstado'])
-    ->name('insumo_orden.actualizar_estado')
-    ->middleware('auth');
+// =========================
+// ORDENES DE PRODUCCIÓN
+// =========================
+Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
+    Route::get('/ordenes/create', [OrdenProduccionController::class, 'create'])->name('ordenes.create');
+    Route::post('/ordenes', [OrdenProduccionController::class, 'store'])->name('ordenes.store');
+});
 
-Route::post('/ordenes/{orden}/insumos', [InsumoOrdenController::class, 'store'])->name('ordenes.insumos.agregar');
-Route::post('/insumos/crear-desde-orden', [InsumoOrdenController::class, 'storeDesdeOrden'])->name('insumos.store.desdeOrden');
-Route::get('/insumos', [InsumoController::class, 'index'])->name('insumos.index');
-Route::post('/insumos', [InsumoController::class, 'store'])->name('insumos.store');
-Route::put('/insumos/{insumo}', [InsumoController::class, 'update'])->name('insumos.update');
-Route::post('/insumos/recepcion', [InsumoController::class, 'storeRecepcion'])->name('insumos.recepcion.store');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/ordenes', [OrdenProduccionController::class, 'index'])->name('ordenes.index');
+    Route::get('/ordenes/{orden}', [OrdenProduccionController::class, 'show'])->name('ordenes.show');
+});
 
-Route::get('/impresiones', [ImpresionController::class, 'index'])->name('impresiones.index');
-Route::post('/impresiones', [ImpresionController::class, 'store'])->name('impresiones.store');
-Route::put('/impresiones/{id}', [ImpresionController::class, 'update'])->name('impresiones.update');
+Route::middleware(['auth'])->group(function () {
+    Route::patch('/orden-etapas/{etapa}/iniciar', [OrdenEtapaController::class, 'iniciar'])->name('orden_etapas.iniciar');
+    Route::patch('/orden-etapas/{etapa}/finalizar', [OrdenEtapaController::class, 'finalizar'])->name('orden_etapas.finalizar');
+});
 
-Route::get('/acabados', [AcabadoController::class, 'index'])->name('acabados.index');
-Route::post('/acabados', [AcabadoController::class, 'store'])->name('acabados.store');
+// =========================
+// PRODUCTOS Y CLIENTES
+// =========================
+Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
+    Route::resource('clientes', ClienteController::class)->except(['show']);
+    Route::post('/clientes/ajax-store', [ClienteController::class, 'ajaxStore'])->name('clientes.ajaxStore');
 
-Route::get('/', [RevisionController::class, 'index'])->name('revisiones.index');
-Route::post('/store', [RevisionController::class, 'store'])->name('revisiones.store');
+    Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+    Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
+    Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
+});
+
+// =========================
+// INSUMOS
+// =========================
+Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
+    Route::patch('/insumos-orden/{id}/estado', [InsumoOrdenController::class, 'actualizarEstado'])->name('insumo_orden.actualizar_estado');
+    Route::post('/ordenes/{orden}/insumos', [InsumoOrdenController::class, 'store'])->name('ordenes.insumos.agregar');
+    Route::post('/insumos/crear-desde-orden', [InsumoOrdenController::class, 'storeDesdeOrden'])->name('insumos.store.desdeOrden');
+
+    Route::get('/insumos', [InsumoController::class, 'index'])->name('insumos.index');
+    Route::post('/insumos', [InsumoController::class, 'store'])->name('insumos.store');
+    Route::put('/insumos/{insumo}', [InsumoController::class, 'update'])->name('insumos.update');
+    Route::post('/insumos/recepcion', [InsumoController::class, 'storeRecepcion'])->name('insumos.recepcion.store');
+});
+
+// =========================
+// IMPRESIÓN
+// =========================
+Route::middleware(['auth', 'role:impresion|preprensa|administrador'])->group(function () {
+    Route::get('/impresiones', [ImpresionController::class, 'index'])->name('impresiones.index');
+    Route::post('/impresiones', [ImpresionController::class, 'store'])->name('impresiones.store');
+    Route::put('/impresiones/{id}', [ImpresionController::class, 'update'])->name('impresiones.update');
+});
+
+// =========================
+// ACABADOS
+// =========================
+Route::middleware(['auth', 'role:acabados|administrador'])->group(function () {
+    Route::get('/acabados', [AcabadoController::class, 'index'])->name('acabados.index');
+    Route::post('/acabados', [AcabadoController::class, 'store'])->name('acabados.store');
+    Route::put('/acabados/{id}', [AcabadoController::class, 'update'])->name('acabados.update');
+
+});
+
+// =========================
+// REVISIÓN
+// =========================
+Route::middleware(['auth', 'role:revision|administrador'])->group(function () {
+    Route::get('/revisiones', [RevisionController::class, 'index'])->name('revisiones.index');
+    Route::post('/store', [RevisionController::class, 'store'])->name('revisiones.store');
+});
+
+// =========================
+// FACTURACIÓN
+// =========================
+Route::middleware(['auth', 'role:facturacion|administrador'])->group(function () {
+    Route::get('/facturacion', [FacturacionController::class, 'index'])->name('facturacion.index');
+    Route::post('/facturacion', [FacturacionController::class, 'store'])->name('facturacion.store');
+    Route::get('/facturacion/{id}/descargar', [FacturacionController::class, 'descargarFactura'])->name('facturacion.descargar');
+});
+
+// =========================
+// INVENTARIO DE ETIQUETAS
+// =========================
+Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
+    Route::resource('inventario-etiquetas', InventarioEtiquetaController::class);
+    Route::put('/inventario-etiquetas/{id}', [InventarioEtiquetaController::class, 'update'])->name('inventario-etiquetas.update');
+});
+
+// =========================
+// DEVOLUCIONES
+// =========================
+Route::middleware(['auth', 'role:administrador'])->group(function () {
+    Route::resource('devoluciones', DevolucionController::class)->only(['index', 'store']);
+});
+
+// =========================
+// REPORTE DE REVISADO
+// =========================
+Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
+    Route::get('/reportes/revisado', [ReporteRevisadoController::class, 'index'])->name('reportes.revisado');
+});
+
 require __DIR__ . '/auth.php';
