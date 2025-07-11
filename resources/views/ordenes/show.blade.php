@@ -62,7 +62,7 @@ $esAdmin = $usuario->hasRole('administrador');
                             <td>{{ $index + 1 }}</td>
                             <td class="d-flex align-items-center gap-2">
                                 @if($item->producto?->imagen)
-                                <img src="{{ asset('storage/' . $item->producto->imagen) }}" alt="img" width="100" height="100" class="rounded border">
+                                <img src="{{ asset($item->producto->imagen) }}" alt="img" width="100" height="100" class="rounded border">
                                 @endif
                                 <span>{{ $item->producto->nombre ?? $item->nombre }}</span>
                             </td>
