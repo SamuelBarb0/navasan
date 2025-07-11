@@ -19,7 +19,7 @@ class OrdenProduccionController extends Controller
     {
         $busqueda = $request->input('busqueda');
         $usuario = auth()->user();
-        $esAdmin = $usuario->hasRole('administrador'); // ← aquí usamos Spatie correctamente
+        $esAdmin = $usuario->hasAnyRole(['administrador', 'preprensa']);
 
         // Órdenes normales
         $ordenes = \App\Models\OrdenProduccion::with('cliente')
