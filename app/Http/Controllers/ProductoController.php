@@ -26,14 +26,28 @@ class ProductoController extends Controller
             'nombre' => 'required|string',
             'presentacion' => 'nullable|string',
             'unidad' => 'nullable|string',
-            'precio' => 'required|numeric|min:0', // obligatorio
+            'precio' => 'required|numeric|min:0',
             'imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-
         try {
             if ($request->hasFile('imagen')) {
-                $data['imagen'] = $request->file('imagen')->store('productos', 'public');
+                $imagen = $request->file('imagen');
+                $nombreImagen = uniqid() . '.' . $imagen->getClientOriginalExtension();
+
+                // Ruta física fuera de Laravel (public_html/images/productos)
+                $rutaDestino = public_path('../images/productos');
+
+                // Crear carpeta si no existe
+                if (!file_exists($rutaDestino)) {
+                    mkdir($rutaDestino, 0775, true);
+                }
+
+                // Mover la imagen
+                $imagen->move($rutaDestino, $nombreImagen);
+
+                // Guardar ruta accesible públicamente
+                $data['imagen'] = 'images/productos/' . $nombreImagen;
             }
 
             $producto = Producto::create($data);
@@ -44,7 +58,7 @@ class ProductoController extends Controller
 
             return redirect()->route('productos.index')->with('success', 'Producto creado correctamente.');
         } catch (\Throwable $e) {
-            Log::error('❌ Error al guardar producto: ' . $e->getMessage());
+            \Log::error('❌ Error al guardar producto: ' . $e->getMessage());
 
             if ($request->ajax()) {
                 return response()->json(['message' => 'Error inesperado.'], 500);
