@@ -111,7 +111,7 @@ Route::middleware(['auth', 'role:revision|administrador'])->group(function () {
 // =========================
 // FACTURACIÓN
 // =========================
-Route::middleware(['auth', 'role:facturacion|administrador'])->group(function () {
+Route::middleware(['auth', 'role:logistica|administrador'])->group(function () {
     Route::get('/facturacion', [FacturacionController::class, 'index'])->name('facturacion.index');
     Route::post('/facturacion', [FacturacionController::class, 'store'])->name('facturacion.store');
     Route::get('/facturacion/{id}/descargar', [FacturacionController::class, 'descargarFactura'])->name('facturacion.descargar');

@@ -47,7 +47,7 @@
                     </x-nav-link>
                     @endhasanyrole
 
-                    @hasanyrole('facturacion|administrador')
+                    @hasanyrole('logistica|administrador')
                     <x-nav-link :href="route('facturacion.index')" :active="request()->routeIs('facturacion.*')">
                         {{ __('Facturación') }}
                     </x-nav-link>
