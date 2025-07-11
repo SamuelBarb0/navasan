@@ -35,15 +35,15 @@ class ProductoController extends Controller
                 $imagen = $request->file('imagen');
                 $nombreImagen = uniqid() . '.' . $imagen->getClientOriginalExtension();
 
-                // Ruta física fuera de Laravel (public_html/images/productos)
-                $rutaDestino = public_path('../images/productos');
+                // Ruta absoluta al directorio público de imágenes
+                $rutaDestino = '/home/u646187213/domains/navasan.site/public_html/images/productos';
 
-                // Crear carpeta si no existe
+                // Crear la carpeta si no existe
                 if (!file_exists($rutaDestino)) {
                     mkdir($rutaDestino, 0775, true);
                 }
 
-                // Mover la imagen
+                // Mover la imagen a la ruta deseada
                 $imagen->move($rutaDestino, $nombreImagen);
 
                 // Guardar ruta accesible públicamente
