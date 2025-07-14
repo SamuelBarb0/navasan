@@ -7,11 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class Cliente extends Model
 {
     protected $fillable = [
-        'nombre', 'nit', 'telefono',
+        'nombre',
+        'nit',
+        'telefono',
     ];
 
     public function ordenesProduccion()
     {
         return $this->hasMany(OrdenProduccion::class);
+    }
+
+    public function productos()
+    {
+        return $this->hasMany(Producto::class);
     }
 }

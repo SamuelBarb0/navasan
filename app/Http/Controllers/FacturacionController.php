@@ -61,7 +61,10 @@ class FacturacionController extends Controller
             'orden.revisiones',
         ])->findOrFail($id);
 
+        // Reemplazar caracteres inválidos para nombres de archivo
+        $numeroOrdenLimpio = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '-', $factura->orden->numero_orden);
+
         $pdf = PDF::loadView('facturacion-logistica.pdf', compact('factura'));
-        return $pdf->download('factura-orden-' . $factura->orden->numero_orden . '.pdf');
+        return $pdf->download('factura-orden-' . $numeroOrdenLimpio . '.pdf');
     }
 }

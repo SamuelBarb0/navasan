@@ -53,6 +53,46 @@
             });
         });
     </script>
+    <script>
+        $(document).ready(function() {
+            $('#cliente_id').on('change', function() {
+                const clienteId = $(this).val();
+
+                if (clienteId) {
+                    $.ajax({
+                        url: `/productos-por-cliente/${clienteId}`,
+                        type: 'GET',
+                        success: function(productos) {
+                            $('.select2-producto').each(function() {
+                                const select = $(this);
+                                const selected = select.val(); // mantener selección si aplica
+                                const nombreInput = select.closest('.producto-item').find('.nombre-producto');
+
+                                select.empty().append('<option value="">-- Selecciona código --</option>');
+
+                                productos.forEach(p => {
+                                    select.append(`<option value="${p.id}" data-nombre="${p.nombre}">${p.codigo}</option>`);
+                                });
+
+                                nombreInput.val('');
+                            });
+                        }
+                    });
+                } else {
+                    $('.select2-producto').html('<option value="">-- Selecciona código --</option>');
+                    $('.nombre-producto').val('');
+                }
+            });
+
+            // Autocompletar nombre producto al seleccionar código
+            $(document).on('change', '.select2-producto', function() {
+                const selectedOption = $(this).find('option:selected');
+                const nombre = selectedOption.data('nombre') || '';
+                $(this).closest('.producto-item').find('.nombre-producto').val(nombre);
+            });
+        });
+    </script>
+
 
     <script>
         $('#formCliente').submit(function(e) {
@@ -83,7 +123,7 @@
         window.productos = [];
         @endisset
     </script>
-
+    @if(request()->is('ordenes/create'))
     <script>
         $(document).ready(function() {
             console.log("🚀 Script cargado y listo");
@@ -142,15 +182,47 @@
             });
         });
     </script>
-
+    @endif
+    @push('scripts')
     <script>
         let index = 1;
 
+        // Variable global editable para productos según el cliente seleccionado
         @isset($productos)
-        const productos = @json($productos);
+        var productos = @json($productos);
         @else
-        const productos = [];
+        var productos = [];
         @endisset
+
+        function actualizarProductosSegunCliente() {
+            const clienteId = $('#cliente_id').val();
+            if (!clienteId) return;
+
+            $.ajax({
+                url: `/productos-por-cliente/${clienteId}`,
+                type: 'GET',
+                success: function(productosCliente) {
+                    if (productosCliente.length === 0) {
+                        console.warn("Cliente sin productos. Se mostrarán todos los disponibles.");
+                    }
+
+                    productos = productosCliente;
+
+                    $('.select2-producto').each(function() {
+                        const select = $(this);
+                        const nombreInput = select.closest('.producto-item').find('.nombre-producto');
+
+                        let options = '<option value="">-- Selecciona código --</option>';
+                        productos.forEach(p => {
+                            options += `<option value="${p.id}" data-nombre="${p.nombre}">${p.codigo}</option>`;
+                        });
+
+                        select.html(options).trigger('change');
+                        nombreInput.val('');
+                    });
+                }
+            });
+        }
 
         function addItem() {
             const container = document.getElementById('items');
@@ -248,6 +320,15 @@
         $(document).ready(function() {
             $('.select2').select2();
             $('.select2-producto').select2();
+
+            // Actualiza productos si ya hay un cliente seleccionado al cargar
+            if ($('#cliente_id').val()) {
+                actualizarProductosSegunCliente();
+            }
+
+            $('#cliente_id').on('change', function() {
+                actualizarProductosSegunCliente();
+            });
         });
     </script>
 
@@ -286,6 +367,25 @@
             });
         });
     </script>
+    <script>
+        $(document).ready(function() {
+            // Filtro superior (form principal)
+            $('select[name="cliente_filtro"]').select2({
+                placeholder: 'Seleccionar cliente',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Select del modal
+            $('#producto_cliente').select2({
+                dropdownParent: $('#modalProducto'),
+                placeholder: 'Seleccionar cliente',
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
+
 </body>
 
 </html>

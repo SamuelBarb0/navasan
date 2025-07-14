@@ -37,7 +37,7 @@
                 <div class="mb-4">
                     <label for="cliente_id" class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <select name="cliente_id" id="cliente_id" class="form-select" required style="border-color: #0578BE;">
+                        <select name="cliente_id" id="cliente_id" class="form-select select2" required style="border-color: #0578BE;">
                             <option value="">-- Selecciona un cliente --</option>
                             @foreach($clientes as $cliente)
                                 <option value="{{ $cliente->id }}">{{ $cliente->nombre }}</option>
@@ -131,6 +131,7 @@
         </div>
     </div>
 </div>
+
 
 {{-- Modal --}}
 @include('productos.partials.modal-create')

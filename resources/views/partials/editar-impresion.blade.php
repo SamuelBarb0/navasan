@@ -29,7 +29,20 @@
 
                     <div class="mb-3">
                         <label class="form-label">Máquina</label>
-                        <input type="text" name="maquina" class="form-control" value="{{ $item->maquina }}">
+                        <select class="form-select maquina-select" data-id="{{ $item->id }}">
+                            <option value="">Seleccione</option>
+                            <option value="MO" {{ $item->maquina == 'MO' ? 'selected' : '' }}>MO</option>
+                            <option value="GTO" {{ $item->maquina == 'GTO' ? 'selected' : '' }}>GTO</option>
+                            <option value="otro" {{ !in_array($item->maquina, ['MO', 'GTO']) ? 'selected' : '' }}>Otro</option>
+                        </select>
+
+                        <div class="mt-2 {{ !in_array($item->maquina, ['MO', 'GTO']) ? '' : 'd-none' }}" id="otraMaquinaDiv{{ $item->id }}">
+                            <input type="text" class="form-control" id="otraMaquinaInput{{ $item->id }}"
+                                   placeholder="Especifique la máquina" value="{{ !in_array($item->maquina, ['MO', 'GTO']) ? $item->maquina : '' }}">
+                        </div>
+
+                        <!-- Este input es el que se envía realmente -->
+                        <input type="hidden" name="maquina" id="maquinaHidden{{ $item->id }}" value="{{ $item->maquina }}">
                     </div>
 
                     <div class="mb-3">
@@ -69,3 +82,34 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.maquina-select').forEach(select => {
+            const id = select.dataset.id;
+            const otraDiv = document.getElementById('otraMaquinaDiv' + id);
+            const otraInput = document.getElementById('otraMaquinaInput' + id);
+            const hiddenInput = document.getElementById('maquinaHidden' + id);
+
+            function actualizarValor() {
+                if (select.value === 'otro') {
+                    otraDiv.classList.remove('d-none');
+                    otraInput.required = true;
+                    hiddenInput.value = otraInput.value;
+                } else {
+                    otraDiv.classList.add('d-none');
+                    otraInput.required = false;
+                    otraInput.value = '';
+                    hiddenInput.value = select.value;
+                }
+            }
+
+            select.addEventListener('change', actualizarValor);
+            otraInput.addEventListener('input', () => {
+                hiddenInput.value = otraInput.value;
+            });
+
+            actualizarValor(); // Inicializar al cargar
+        });
+    });
+</script>

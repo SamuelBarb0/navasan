@@ -15,7 +15,8 @@ use App\Http\Controllers\{
     InventarioEtiquetaController,
     DevolucionController,
     ReporteRevisadoController,
-    OrdenEtapaController
+    OrdenEtapaController,
+    UserController
 };
 
 // Página de bienvenida
@@ -41,6 +42,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::get('/ordenes/create', [OrdenProduccionController::class, 'create'])->name('ordenes.create');
     Route::post('/ordenes', [OrdenProduccionController::class, 'store'])->name('ordenes.store');
+    Route::delete('/ordenes/{orden}', [OrdenProduccionController::class, 'destroy'])->name('ordenes.destroy'); // 👈 Ruta añadida
+    Route::delete('/ordenes/insumos/{id}/eliminar', [InsumoOrdenController::class, 'destroy'])->name('ordenes.insumos.eliminar');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -65,6 +68,19 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
     Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
+    Route::delete('/productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+    Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
+    Route::get('/productos-por-cliente/{clienteId}', [ProductoController::class, 'porCliente']);
+});
+
+Route::prefix('usuarios')->name('usuarios.')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('index');         // Mostrar todos los usuarios
+    Route::get('/create', [UserController::class, 'create'])->name('create'); // Formulario de creación
+    Route::post('/', [UserController::class, 'store'])->name('store');        // Guardar nuevo usuario
+    Route::get('/{usuario}', [UserController::class, 'show'])->name('show');  // Ver detalle de usuario
+    Route::get('/{usuario}/edit', [UserController::class, 'edit'])->name('edit'); // Formulario de edición
+    Route::put('/{usuario}', [UserController::class, 'update'])->name('update');  // Actualizar usuario
+    Route::delete('/{usuario}', [UserController::class, 'destroy'])->name('destroy'); // Eliminar usuario
 });
 
 // =========================

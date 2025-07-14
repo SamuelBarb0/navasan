@@ -76,10 +76,17 @@
                                     {{ str_replace('_', ' ', $orden->estado) }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="d-flex justify-content-center gap-2">
                                 <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Ver
                                 </a>
+                                <form action="{{ route('ordenes.destroy', $orden->id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta orden?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         @endforeach
@@ -131,10 +138,19 @@
                                     {{ str_replace('_', ' ', $orden->estado) }}
                                 </span>
                             </td>
-                            <td>
-                                <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-danger">
+                            <td class="d-flex justify-content-center gap-2">
+                                <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Ver
                                 </a>
+                                @if($esAdmin || Auth::user()->hasRole('preprensa'))
+                                <form action="{{ route('ordenes.destroy', $orden->id) }}" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta orden de producción? Esta acción no se puede deshacer.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                                @endif
                             </td>
                         </tr>
                         @endforeach

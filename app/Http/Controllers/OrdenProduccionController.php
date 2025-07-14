@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\OrdenProduccion;
 use App\Models\ItemOrden;
+use App\Models\Producto;
 use App\Models\EtapaProduccion;
 use App\Models\OrdenEtapa;
 use App\Models\ItemEntrega;
@@ -79,13 +80,17 @@ class OrdenProduccionController extends Controller
         return view('ordenes.show', compact('orden', 'usuario', 'esAdmin'));
     }
 
-
-    public function create()
+    public function create(Request $request)
     {
         $clientes = Cliente::all();
-        $productos = \App\Models\Producto::where('activo', true)->get();
 
-        return view('ordenes.create', compact('clientes', 'productos'));
+        $cliente_id = $request->get('cliente_id');
+
+        $productos = Producto::when($cliente_id, function ($query) use ($cliente_id) {
+            return $query->where('cliente_id', $cliente_id);
+        })->get();
+
+        return view('ordenes.create', compact('clientes', 'productos', 'cliente_id'));
     }
 
 
@@ -166,14 +171,26 @@ class OrdenProduccionController extends Controller
     }
 
     public function itemsJson($id)
-{
-    $orden = \App\Models\OrdenProduccion::with('items')->findOrFail($id);
-    return response()->json(
-        $orden->items->map(fn($item) => [
-            'id' => $item->id,
-            'nombre' => $item->nombre,
-        ])
-    );
-}
+    {
+        $orden = \App\Models\OrdenProduccion::with('items')->findOrFail($id);
+        return response()->json(
+            $orden->items->map(fn($item) => [
+                'id' => $item->id,
+                'nombre' => $item->nombre,
+            ])
+        );
+    }
 
+    public function destroy($id)
+    {
+        $orden = OrdenProduccion::findOrFail($id);
+
+        // Si necesitas lógica extra de validación/autorización, agrégala aquí
+
+        $orden->delete();
+
+        return redirect()->route('ordenes.index')->with('success', 'Orden eliminada correctamente.');
+    }
+
+    
 }

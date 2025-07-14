@@ -1,107 +1,105 @@
-<nav class="bg-white border-b border-gray-200 shadow">
+<nav class="bg-white border-b border-gray-100 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
-            <!-- Logo y navegación principal -->
-            <div class="flex items-center space-x-8">
-                <!-- Logo -->
-                <a href="{{ route('dashboard') }}" class="flex items-center space-x-2">
-                    <img src="{{ asset('images/navasan.png') }}" alt="Logo NAVASAN" class="h-10 w-auto">
-                </a>
 
-                <!-- Enlaces principales -->
-                <div class="hidden sm:flex space-x-6">
+            {{-- LOGO --}}
+            <a href="{{ route('dashboard') }}" class="flex items-center space-x-2">
+                <img src="{{ asset('images/navasan.png') }}" alt="Logo NAVASAN" class="h-10 w-auto">
+            </a>
 
-                    @hasanyrole('preprensa|administrador')
-                    <x-nav-link :href="route('ordenes.index')" :active="request()->routeIs('ordenes.*')">
-                        {{ __('Órdenes') }}
-                    </x-nav-link>
-                    @endhasanyrole
+            {{-- MENÚS DESPLEGABLES --}}
+            <div class="hidden sm:flex space-x-6">
+                <!-- Menú Genérico -->
+                @php
+                    $menus = [
+                        'Producción' => [
+                            ['route' => 'ordenes.index', 'label' => 'Órdenes', 'roles' => ['preprensa', 'administrador']],
+                            ['route' => 'impresiones.index', 'label' => 'Impresión', 'roles' => ['impresion', 'preprensa', 'administrador']],
+                            ['route' => 'acabados.index', 'label' => 'Acabados', 'roles' => ['acabados', 'administrador']],
+                            ['route' => 'revisiones.index', 'label' => 'Revisión', 'roles' => ['revision', 'administrador']],
+                        ],
+                        'Administración' => [
+                            ['route' => 'clientes.index', 'label' => 'Clientes', 'roles' => ['administrador']],
+                            ['route' => 'productos.index', 'label' => 'Productos', 'roles' => ['administrador']],
+                            ['route' => 'devoluciones.index', 'label' => 'Devoluciones', 'roles' => ['administrador']],
+                        ],
+                        'Almacén' => [
+                            ['route' => 'insumos.index', 'label' => 'Insumos', 'roles' => ['almacen', 'administrador']],
+                            ['route' => 'inventario-etiquetas.index', 'label' => 'Inventario', 'roles' => ['almacen', 'administrador']],
+                        ],
+                        'Logística' => [
+                            ['route' => 'facturacion.index', 'label' => 'Facturación', 'roles' => ['logistica', 'administrador']],
+                        ],
+                        'Reportes' => [
+                            ['route' => 'reportes.revisado', 'label' => 'Reporte Revisado', 'roles' => ['preprensa', 'administrador']],
+                        ],
+                    ];
+                @endphp
 
-                    @hasanyrole('administrador')
-                    <x-nav-link :href="route('clientes.index')" :active="request()->routeIs('clientes.*')">
-                        {{ __('Clientes') }}
-                    </x-nav-link>
-                    @endhasanyrole
-                    
-                    @hasanyrole('almacen|administrador')
-                    <x-nav-link :href="route('insumos.index')" :active="request()->routeIs('insumos.*')">
-                        {{ __('Insumos') }}
-                    </x-nav-link>
-                    @endhasanyrole
+                @foreach($menus as $titulo => $opciones)
+                    <div class="relative group">
+                        <button onclick="toggleDropdown('{{ Str::slug($titulo) }}')" class="text-[#16509D] font-semibold hover:text-[#0578BE] focus:outline-none transition duration-200">
+                            {{ $titulo }}
+                        </button>
+                        <div id="{{ Str::slug($titulo) }}" class="dropdown-content hidden absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 py-2 text-center">
+                            @foreach($opciones as $item)
+                                @hasanyrole(implode('|', $item['roles']))
+                                    <a href="{{ route($item['route']) }}"
+                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-[#f1f8ff] transition">
+                                        {{ $item['label'] }}
+                                    </a>
+                                @endhasanyrole
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
 
-                    @hasanyrole('impresion|preprensa|administrador')
-                    <x-nav-link :href="route('impresiones.index')" :active="request()->routeIs('impresiones.*')">
-                        {{ __('Impresión') }}
-                    </x-nav-link>
-                    @endhasanyrole
+            {{-- USUARIO --}}
+            <div class="hidden sm:flex items-center space-x-2">
+                <x-dropdown align="right" width="48">
+                    <x-slot name="trigger">
+                        <button class="inline-flex items-center px-4 py-2 bg-white text-[#16509D] font-semibold rounded hover:bg-gray-100">
+                            {{ Auth::user()->name }}
+                            <svg class="ml-2 h-4 w-4 text-[#16509D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </x-slot>
 
-                    @hasanyrole('acabados|administrador')
-                    <x-nav-link :href="route('acabados.index')" :active="request()->routeIs('acabados.*')">
-                        {{ __('Acabados') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                    @hasanyrole('revision|administrador')
-                    <x-nav-link :href="route('revisiones.index')" :active="request()->routeIs('revisiones.*')">
-                        {{ __('Revisión') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                    @hasanyrole('logistica|administrador')
-                    <x-nav-link :href="route('facturacion.index')" :active="request()->routeIs('facturacion.*')">
-                        {{ __('Facturación') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                    @hasanyrole('almacen|administrador')
-                    <x-nav-link :href="route('inventario-etiquetas.index')" :active="request()->routeIs('inventario-etiquetas.*')">
-                        {{ __('Inventario') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                    @hasanyrole('administrador')
-                    <x-nav-link :href="route('devoluciones.index')" :active="request()->routeIs('devoluciones.*')">
-                        {{ __('Devoluciones') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                    @hasanyrole('preprensa|administrador')
-                    <x-nav-link :href="route('reportes.revisado')" :active="request()->routeIs('reportes.revisado')">
-                        {{ __('Reporte Revisado') }}
-                    </x-nav-link>
-                    @endhasanyrole
-
-                </div>
-
-
-
-                <!-- Usuario -->
-                <div class="hidden sm:flex items-center space-x-3">
-                    <x-dropdown align="right" width="48">
-                        <x-slot name="trigger">
-                            <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm text-gray-700 hover:bg-gray-100">
-                                {{ Auth::user()->name }}
-                                <svg class="ml-2 h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                        </x-slot>
-
-                        <x-slot name="content">
-                            <x-dropdown-link :href="route('profile.edit')">
-                                {{ __('Perfil') }}
+                    <x-slot name="content">
+                        <x-dropdown-link :href="route('profile.edit')">
+                            {{ __('Perfil') }}
+                        </x-dropdown-link>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <x-dropdown-link :href="route('logout')"
+                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                {{ __('Cerrar sesión') }}
                             </x-dropdown-link>
-
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                    {{ __('Cerrar sesión') }}
-                                </x-dropdown-link>
-                            </form>
-                        </x-slot>
-                    </x-dropdown>
-                </div>
+                        </form>
+                    </x-slot>
+                </x-dropdown>
             </div>
         </div>
+    </div>
 </nav>
+
+{{-- JavaScript para los menús --}}
+<script>
+    function toggleDropdown(id) {
+        // Oculta todos los menús
+        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
+        // Muestra el que corresponde
+        const dropdown = document.getElementById(id);
+        if (dropdown) dropdown.classList.toggle('hidden');
+    }
+
+    // Cierra si se hace clic afuera
+    window.addEventListener('click', function (e) {
+        if (!e.target.closest('.relative')) {
+            document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
+        }
+    });
+</script>

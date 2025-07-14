@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Models;
 
@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Producto extends Model
 {
     protected $fillable = [
+        'cliente_id',
         'codigo',
         'nombre',
         'presentacion',
@@ -15,4 +16,9 @@ class Producto extends Model
         'imagen',     // <- Nuevo campo
         'precio',     // <- Nuevo campo
     ];
+
+    public function cliente()
+    {
+        return $this->belongsTo(Cliente::class);
+    }
 }

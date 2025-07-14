@@ -188,4 +188,20 @@ class InsumoOrdenController extends Controller
 
         return back()->with('success', 'Insumo actualizado correctamente.');
     }
+
+    public function destroy($id)
+    {
+        $insumoOrden = InsumoOrden::findOrFail($id);
+        $inventario = InventarioInsumo::where('insumo_id', $insumoOrden->insumo_id)->first();
+
+        // Solo devolver al inventario si estaba liberado
+        if ($insumoOrden->estado === 'liberado' && $inventario) {
+            $inventario->cantidad_disponible += $insumoOrden->cantidad_requerida;
+            $inventario->save();
+        }
+
+        $insumoOrden->delete();
+
+        return back()->with('success', 'Insumo eliminado y stock restaurado correctamente.');
+    }
 }
