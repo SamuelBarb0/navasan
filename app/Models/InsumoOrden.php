@@ -30,4 +30,6 @@ class InsumoOrden extends Model
     {
         return $this->belongsTo(Insumo::class);
     }
+
+    
 }

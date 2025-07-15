@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\OrdenProduccion;
 use App\Models\ItemOrden;
+use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\EtapaProduccion;
 use App\Models\OrdenEtapa;
@@ -76,8 +77,9 @@ class OrdenProduccionController extends Controller
 
         $usuario = auth()->user();
         $esAdmin = $usuario->hasRole('administrador');
+        $categorias = Categoria::orderBy('nombre')->get();
 
-        return view('ordenes.show', compact('orden', 'usuario', 'esAdmin'));
+        return view('ordenes.show', compact('orden', 'usuario', 'esAdmin', 'categorias'));
     }
 
     public function create(Request $request)

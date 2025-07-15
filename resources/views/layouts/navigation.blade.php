@@ -10,31 +10,32 @@
             {{-- MENÚS DESPLEGABLES --}}
             <div class="hidden sm:flex space-x-6">
                 <!-- Menú Genérico -->
-                @php
-    $menus = [
-        'Producción' => [
-            ['route' => 'ordenes.index', 'label' => 'Órdenes', 'roles' => ['preprensa', 'administrador']],
-            ['route' => 'impresiones.index', 'label' => 'Impresión', 'roles' => ['impresion', 'preprensa', 'administrador']],
-            ['route' => 'acabados.index', 'label' => 'Acabados', 'roles' => ['acabados', 'administrador']],
-            ['route' => 'revisiones.index', 'label' => 'Revisión', 'roles' => ['revision', 'administrador']],
-        ],
-        'Administración' => [
-            ['route' => 'clientes.index', 'label' => 'Clientes', 'roles' => ['administrador']],
-            ['route' => 'productos.index', 'label' => 'Productos', 'roles' => ['administrador']],
-            ['route' => 'devoluciones.index', 'label' => 'Devoluciones', 'roles' => ['administrador']],
-            ['route' => 'usuarios.index', 'label' => 'Usuarios', 'roles' => ['administrador']],
-        ],
-        'Almacén' => [
-            ['route' => 'insumos.index', 'label' => 'Insumos', 'roles' => ['almacen', 'administrador']],
-            ['route' => 'inventario-etiquetas.index', 'label' => 'Inventario', 'roles' => ['almacen', 'administrador']],
-        ],
-        'Logística' => [
-            ['route' => 'facturacion.index', 'label' => 'Facturación', 'roles' => ['logistica', 'administrador']],
-        ],
-        'Reportes' => [
-            ['route' => 'reportes.revisado', 'label' => 'Reporte Revisado', 'roles' => ['preprensa', 'administrador']],
-        ],
-    ];
+  @php
+$menus = [
+    'Producción' => [
+        ['route' => 'ordenes.index', 'label' => 'Órdenes', 'roles' => ['preprensa', 'administrador']],
+        ['route' => 'impresiones.index', 'label' => 'Impresión', 'roles' => ['impresion', 'preprensa', 'administrador']],
+        ['route' => 'acabados.index', 'label' => 'Acabados', 'roles' => ['acabados', 'administrador']],
+        ['route' => 'revisiones.index', 'label' => 'Revisión', 'roles' => ['revision', 'administrador']],
+    ],
+    'Administración' => [
+        ['route' => 'clientes.index', 'label' => 'Clientes', 'roles' => ['administrador']],
+        ['route' => 'productos.index', 'label' => 'Productos', 'roles' => ['administrador']],
+        ['route' => 'devoluciones.index', 'label' => 'Devoluciones', 'roles' => ['administrador']],
+        ['route' => 'usuarios.index', 'label' => 'Usuarios', 'roles' => ['administrador']],
+    ],
+    'Almacén' => [
+        ['route' => 'insumos.index', 'label' => 'Insumos', 'roles' => ['almacen', 'administrador']],
+        ['route' => 'categorias.index', 'label' => 'Categorías', 'roles' => ['almacen', 'administrador']],
+        ['route' => 'inventario-etiquetas.index', 'label' => 'Inventario', 'roles' => ['almacen', 'administrador']],
+    ],
+    'Logística' => [
+        ['route' => 'facturacion.index', 'label' => 'Facturación', 'roles' => ['logistica', 'administrador']],
+    ],
+    'Reportes' => [
+        ['route' => 'reportes.revisado', 'label' => 'Reporte Revisado', 'roles' => ['preprensa', 'administrador']],
+    ],
+];
 @endphp
 
                 @foreach($menus as $titulo => $opciones)
