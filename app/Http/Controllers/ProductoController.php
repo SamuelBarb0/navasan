@@ -133,11 +133,15 @@ class ProductoController extends Controller
 
     public function porCliente($clienteId)
     {
+        Log::debug("🔍 Consultando productos para cliente ID: {$clienteId}");
+
         $productos = Producto::where('cliente_id', $clienteId)->get();
 
         if ($productos->isEmpty()) {
-            // Opción: cargar todos si el cliente no tiene productos propios
+            Log::warning("⚠️ Cliente ID {$clienteId} no tiene productos asociados. Cargando todos los productos.");
             $productos = Producto::all();
+        } else {
+            Log::info("✅ Se encontraron " . $productos->count() . " productos para el cliente ID {$clienteId}");
         }
 
         return response()->json($productos);

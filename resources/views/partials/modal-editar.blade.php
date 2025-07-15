@@ -3,6 +3,8 @@
         <form method="POST" action="{{ route('inventario-etiquetas.update', $etiqueta->id) }}" class="w-100">
             @csrf
             @method('PUT')
+            <input type="hidden" name="orden_id" value="{{ $etiqueta->orden_id }}">
+
             <div class="modal-content shadow-lg rounded-4 border-0">
                 <div class="modal-header text-white rounded-top-4" style="background-color: #16509D;">
                     <h5 class="modal-title">
@@ -12,29 +14,40 @@
                 </div>
 
                 <div class="modal-body px-4 py-3">
+
                     {{-- Producto --}}
                     <div class="mb-3">
                         <label class="form-label">Producto</label>
-                        <select name="item_orden_id" id="productoSelect{{ $etiqueta->id }}" class="form-select rounded-3" required>
-                            <option value="">Cargando productos...</option>
-                        </select>
+                        @if($etiqueta->orden_id)
+                            <select name="item_orden_id" id="productoSelect{{ $etiqueta->id }}" class="form-select rounded-3" required>
+                                <option value="">Cargando productos...</option>
+                            </select>
+                        @else
+                            <select name="producto_id" id="productoSelect{{ $etiqueta->id }}" class="form-select rounded-3" required>
+                                <option value="">Cargando productos...</option>
+                            </select>
+                        @endif
                     </div>
 
+                    {{-- Cantidad --}}
                     <div class="mb-3">
                         <label class="form-label">Cantidad</label>
                         <input type="number" name="cantidad" class="form-control rounded-3" value="{{ $etiqueta->cantidad }}" required min="1">
                     </div>
 
+                    {{-- Fecha --}}
                     <div class="mb-3">
                         <label class="form-label">Fecha programada</label>
                         <input type="date" name="fecha_programada" class="form-control rounded-3" value="{{ $etiqueta->fecha_programada }}">
                     </div>
 
+                    {{-- Observaciones --}}
                     <div class="mb-3">
                         <label class="form-label">Observaciones</label>
                         <textarea name="observaciones" class="form-control rounded-3" rows="2">{{ $etiqueta->observaciones }}</textarea>
                     </div>
 
+                    {{-- Estado --}}
                     <div class="mb-3">
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-select rounded-3" required>
@@ -46,6 +59,7 @@
 
                     <hr class="my-3">
 
+                    {{-- Contraseña --}}
                     <div class="mb-3">
                         <label class="form-label text-danger">
                             <i class="bi bi-lock-fill me-1"></i> Contraseña de administrador
@@ -74,22 +88,41 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const ordenId = {{ $etiqueta->orden_id }};
+        const ordenId = {{ $etiqueta->orden_id ?? 'null' }};
         const select = document.getElementById('productoSelect{{ $etiqueta->id }}');
-        const selectedId = {{ $etiqueta->item_orden_id ?? 'null' }};
+        const selectedItemId = {{ $etiqueta->item_orden_id ?? 'null' }};
+        const selectedProductoId = {{ $etiqueta->producto_id ?? 'null' }};
 
-        fetch(`/ordenes/${ordenId}/items-json`)
-            .then(res => res.json())
-            .then(items => {
-                let options = '<option value="">Seleccione un producto</option>';
-                items.forEach(item => {
-                    const selected = item.id === selectedId ? 'selected' : '';
-                    options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
+        if (ordenId) {
+            // Etiqueta asociada a orden: cargar productos de la orden
+            fetch(`/ordenes/${ordenId}/items-json`)
+                .then(res => res.json())
+                .then(items => {
+                    let options = '<option value="">Seleccione un producto</option>';
+                    items.forEach(item => {
+                        const selected = item.id === selectedItemId ? 'selected' : '';
+                        options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
+                    });
+                    select.innerHTML = options;
+                })
+                .catch(() => {
+                    select.innerHTML = '<option value="">Error al cargar productos</option>';
                 });
-                select.innerHTML = options;
-            })
-            .catch(() => {
-                select.innerHTML = '<option value="">Error al cargar productos</option>';
-            });
+        } else {
+            // Etiqueta libre: cargar productos sueltos
+            fetch(`/productos/todos-json`)
+                .then(res => res.json())
+                .then(productos => {
+                    let options = '<option value="">Seleccione un producto</option>';
+                    productos.forEach(p => {
+                        const selected = p.id === selectedProductoId ? 'selected' : '';
+                        options += `<option value="${p.id}" ${selected}>${p.nombre}</option>`;
+                    });
+                    select.innerHTML = options;
+                })
+                .catch(() => {
+                    select.innerHTML = '<option value="">Error al cargar productos</option>';
+                });
+        }
     });
 </script>

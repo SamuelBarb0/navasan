@@ -11,48 +11,48 @@
             <div class="hidden sm:flex space-x-6">
                 <!-- Menú Genérico -->
                 @php
-                $menus = [
-                'Producción' => [
-                ['route' => 'ordenes.index', 'label' => 'Órdenes', 'roles' => ['preprensa', 'administrador']],
-                ['route' => 'impresiones.index', 'label' => 'Impresión', 'roles' => ['impresion', 'preprensa', 'administrador']],
-                ['route' => 'acabados.index', 'label' => 'Acabados', 'roles' => ['acabados', 'administrador']],
-                ['route' => 'revisiones.index', 'label' => 'Revisión', 'roles' => ['revision', 'administrador']],
-                ],
-                'Administración' => [
-                ['route' => 'clientes.index', 'label' => 'Clientes', 'roles' => ['administrador']],
-                ['route' => 'productos.index', 'label' => 'Productos', 'roles' => ['administrador']],
-                ['route' => 'devoluciones.index', 'label' => 'Devoluciones', 'roles' => ['administrador']],
-                ['route' => 'usuarios.index', 'label' => 'Usuarios', 'roles' => ['administrador']], {{-- AÑADIDO --}}
-                ],
-                'Almacén' => [
-                ['route' => 'insumos.index', 'label' => 'Insumos', 'roles' => ['almacen', 'administrador']],
-                ['route' => 'inventario-etiquetas.index', 'label' => 'Inventario', 'roles' => ['almacen', 'administrador']],
-                ],
-                'Logística' => [
-                ['route' => 'facturacion.index', 'label' => 'Facturación', 'roles' => ['logistica', 'administrador']],
-                ],
-                'Reportes' => [
-                ['route' => 'reportes.revisado', 'label' => 'Reporte Revisado', 'roles' => ['preprensa', 'administrador']],
-                ],
-                ];
-                @endphp
+    $menus = [
+        'Producción' => [
+            ['route' => 'ordenes.index', 'label' => 'Órdenes', 'roles' => ['preprensa', 'administrador']],
+            ['route' => 'impresiones.index', 'label' => 'Impresión', 'roles' => ['impresion', 'preprensa', 'administrador']],
+            ['route' => 'acabados.index', 'label' => 'Acabados', 'roles' => ['acabados', 'administrador']],
+            ['route' => 'revisiones.index', 'label' => 'Revisión', 'roles' => ['revision', 'administrador']],
+        ],
+        'Administración' => [
+            ['route' => 'clientes.index', 'label' => 'Clientes', 'roles' => ['administrador']],
+            ['route' => 'productos.index', 'label' => 'Productos', 'roles' => ['administrador']],
+            ['route' => 'devoluciones.index', 'label' => 'Devoluciones', 'roles' => ['administrador']],
+            ['route' => 'usuarios.index', 'label' => 'Usuarios', 'roles' => ['administrador']],
+        ],
+        'Almacén' => [
+            ['route' => 'insumos.index', 'label' => 'Insumos', 'roles' => ['almacen', 'administrador']],
+            ['route' => 'inventario-etiquetas.index', 'label' => 'Inventario', 'roles' => ['almacen', 'administrador']],
+        ],
+        'Logística' => [
+            ['route' => 'facturacion.index', 'label' => 'Facturación', 'roles' => ['logistica', 'administrador']],
+        ],
+        'Reportes' => [
+            ['route' => 'reportes.revisado', 'label' => 'Reporte Revisado', 'roles' => ['preprensa', 'administrador']],
+        ],
+    ];
+@endphp
 
                 @foreach($menus as $titulo => $opciones)
-                <div class="relative group">
-                    <button onclick="toggleDropdown('{{ Str::slug($titulo) }}')" class="text-[#16509D] font-semibold hover:text-[#0578BE] focus:outline-none transition duration-200">
-                        {{ $titulo }}
-                    </button>
-                    <div id="{{ Str::slug($titulo) }}" class="dropdown-content hidden absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 py-2 text-center">
-                        @foreach($opciones as $item)
-                        @hasanyrole(implode('|', $item['roles']))
-                        <a href="{{ route($item['route']) }}"
-                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-[#f1f8ff] transition">
-                            {{ $item['label'] }}
-                        </a>
-                        @endhasanyrole
-                        @endforeach
+                    <div class="relative group">
+                        <button onclick="toggleDropdown('{{ Str::slug($titulo) }}')" class="text-[#16509D] font-semibold hover:text-[#0578BE] focus:outline-none transition duration-200">
+                            {{ $titulo }}
+                        </button>
+                        <div id="{{ Str::slug($titulo) }}" class="dropdown-content hidden absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 py-2 text-center">
+                            @foreach($opciones as $item)
+                                @hasanyrole(implode('|', $item['roles']))
+                                    <a href="{{ route($item['route']) }}"
+                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-[#f1f8ff] transition">
+                                        {{ $item['label'] }}
+                                    </a>
+                                @endhasanyrole
+                            @endforeach
+                        </div>
                     </div>
-                </div>
                 @endforeach
             </div>
 
@@ -98,7 +98,7 @@
     }
 
     // Cierra si se hace clic afuera
-    window.addEventListener('click', function(e) {
+    window.addEventListener('click', function (e) {
         if (!e.target.closest('.relative')) {
             document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
         }

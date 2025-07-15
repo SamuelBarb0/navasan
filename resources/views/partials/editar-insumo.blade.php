@@ -25,6 +25,19 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select name="categoria_id" class="form-select" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach($categorias as $categoria)
+                            <option value="{{ $categoria->id }}" {{ $insumo->categoria_id == $categoria->id ? 'selected' : '' }}>
+                                {{ $categoria->nombre }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+
+                    <div class="mb-3">
                         <label class="form-label">Descripción</label>
                         <textarea name="descripcion" class="form-control">{{ $insumo->descripcion }}</textarea>
                     </div>

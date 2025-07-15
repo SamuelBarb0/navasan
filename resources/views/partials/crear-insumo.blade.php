@@ -19,6 +19,15 @@
                         <input type="text" class="form-control" name="unidad" placeholder="ml, metros, rollos..." required>
                     </div>
                     <div class="mb-3">
+                        <label for="categoria_id" class="form-label">Categoría</label>
+                        <select name="categoria_id" class="form-select" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach($categorias as $categoria)
+                            <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label for="cantidad" class="form-label">Cantidad inicial</label>
                         <input type="number" step="any" min="0" class="form-control" name="cantidad" required>
                     </div>

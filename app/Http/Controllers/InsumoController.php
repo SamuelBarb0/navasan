@@ -6,15 +6,24 @@ use App\Models\Insumo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // ✅ ESTA LÍNEA ES CLAVE
 use App\Models\InsumoRecepcion;
+use App\Models\Categoria;
 use Illuminate\Support\Facades\Log;
 use App\Models\InventarioInsumo;
 
 class InsumoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $insumos = Insumo::orderBy('nombre')->get();
-        return view('insumos.index', compact('insumos'));
+        $query = Insumo::with(['inventario', 'categoria'])->orderBy('nombre');
+
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
+        }
+
+        $insumos = $query->get();
+        $categorias = Categoria::orderBy('nombre')->get();
+
+        return view('insumos.index', compact('insumos', 'categorias'));
     }
 
     public function store(Request $request)
@@ -22,18 +31,21 @@ class InsumoController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'unidad' => 'required|string|max:50',
+            'categoria_id' => 'required|exists:categorias,id',
             'cantidad' => 'required|numeric|min:0',
         ]);
 
         DB::beginTransaction();
+
         try {
-            $insumo = \App\Models\Insumo::create([
+            $insumo = Insumo::create([
                 'nombre' => $request->nombre,
                 'unidad' => $request->unidad,
+                'categoria_id' => $request->categoria_id,
                 'activo' => true,
             ]);
 
-            \App\Models\InventarioInsumo::create([
+            InventarioInsumo::create([
                 'insumo_id' => $insumo->id,
                 'cantidad_disponible' => $request->cantidad,
             ]);
@@ -53,15 +65,16 @@ class InsumoController extends Controller
             'nombre' => 'required|string|max:255',
             'unidad' => 'required|string|max:50',
             'descripcion' => 'nullable|string',
+            'categoria_id' => 'required|exists:categorias,id',
             'cantidad_actual' => 'nullable|numeric|min:0',
             'activo' => 'required|boolean',
         ]);
 
         $insumo = Insumo::findOrFail($id);
-        $insumo->update($request->only(['nombre', 'unidad', 'descripcion', 'activo']));
+        $insumo->update($request->only(['nombre', 'unidad', 'descripcion', 'categoria_id', 'activo']));
 
         // Actualizar inventario
-        $inventario = \App\Models\InventarioInsumo::firstOrCreate(
+        $inventario = InventarioInsumo::firstOrCreate(
             ['insumo_id' => $insumo->id],
             ['cantidad_disponible' => 0]
         );
@@ -71,6 +84,7 @@ class InsumoController extends Controller
 
         return redirect()->route('insumos.index')->with('success', 'Insumo actualizado correctamente.');
     }
+
 
     public function storeRecepcion(Request $request)
     {

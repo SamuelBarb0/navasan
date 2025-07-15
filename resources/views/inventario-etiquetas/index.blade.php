@@ -19,20 +19,33 @@
                 <div class="row g-3">
                     {{-- Orden --}}
                     <div class="col-md-4">
-                        <label class="form-label">Orden de Producción</label>
-                        <select name="orden_id" class="form-select" id="ordenSelect" required>
-                            <option value="">Seleccione</option>
+                        <label class="form-label">Orden de Producción (opcional)</label>
+                        <select name="orden_id" class="form-select" id="ordenSelect">
+                            <option value="">Sin orden</option>
                             @foreach($ordenes as $orden)
                             <option value="{{ $orden->id }}">#{{ $orden->numero_orden }} - {{ $orden->cliente->nombre }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    {{-- Producto --}}
-                    <div class="col-md-4">
-                        <label class="form-label">Producto</label>
-                        <select name="item_orden_id" id="productoSelect" class="form-select" required>
-                            <option value="">Seleccione una orden primero</option>
+                    
+
+                    {{-- Producto libre --}}
+                    <div class="col-md-4" id="grupoProductoLibre" style="display: block;">
+                        <label class="form-label">Producto (sin orden)</label>
+                        <select name="producto_id" id="productoLibreSelect" class="form-select">
+                            <option value="">Seleccione un producto</option>
+                            @foreach($productos as $producto)
+                            <option value="{{ $producto->id }}">{{ $producto->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Producto de orden --}}
+                    <div class="col-md-4" id="grupoItemOrden" style="display: none;">
+                        <label class="form-label">Producto (de orden)</label>
+                        <select name="item_orden_id" id="itemOrdenSelect" class="form-select">
+                            <option value="">Seleccione un producto</option>
                         </select>
                     </div>
 
@@ -46,6 +59,12 @@
                     <div class="col-md-4">
                         <label class="form-label">Fecha programada entrega</label>
                         <input type="date" name="fecha_programada" class="form-control">
+                    </div>
+
+                    {{-- Observaciones --}}
+                    <div class="col-md-8">
+                        <label class="form-label">Observaciones</label>
+                        <input type="text" name="observaciones" class="form-control" maxlength="1000">
                     </div>
 
                     {{-- Botón --}}
@@ -71,7 +90,7 @@
                             <th>Cantidad</th>
                             <th>Observaciones</th>
                             <th>Programada para</th>
-                            <th>Estado</th> {{-- NUEVA COLUMNA --}}
+                            <th>Estado</th>
                             <th>Creado</th>
                             <th></th>
                         </tr>
@@ -79,11 +98,25 @@
                     <tbody>
                         @forelse($inventarios as $item)
                         <tr>
-                            <td><strong>#{{ $item->orden->numero_orden }}</strong></td>
-                            <td>{{ $item->itemOrden->nombre ?? '-' }}</td>
-                            <td>{{ $item->orden->cliente->nombre ?? '-' }}</td>
+                            <td>
+                                @if($item->orden)
+                                <strong>#{{ $item->orden->numero_orden }}</strong>
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($item->itemOrden)
+                                {{ $item->itemOrden->nombre }}
+                                @elseif($item->producto)
+                                {{ $item->producto->nombre }}
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td>{{ $item->orden->cliente->nombre ?? '—' }}</td>
                             <td>{{ $item->cantidad }}</td>
-                            <td>{{ $item->observaciones ?? '-' }}</td>
+                            <td>{{ $item->observaciones ?? '—' }}</td>
                             <td>
                                 @if($item->fecha_programada)
                                 <span class="badge bg-warning text-dark">{{ \Carbon\Carbon::parse($item->fecha_programada)->format('Y-m-d') }}</span>
@@ -94,10 +127,10 @@
                             <td>
                                 @php
                                 $badgeClass = match($item->estado) {
-                                'liberado' => 'bg-success',
-                                'stock' => 'bg-info text-dark',
-                                'pendiente' => 'bg-secondary',
-                                default => 'bg-light text-muted'
+                                    'liberado' => 'bg-success',
+                                    'stock' => 'bg-info text-dark',
+                                    'pendiente' => 'bg-secondary',
+                                    default => 'bg-light text-muted'
                                 };
                                 @endphp
                                 <span class="badge {{ $badgeClass }}">{{ ucfirst($item->estado ?? 'sin estado') }}</span>
@@ -123,35 +156,38 @@
     </div>
 </div>
 
-{{-- Script para cargar productos --}}
 <script>
-    document.getElementById('ordenSelect').addEventListener('change', function() {
+    const ordenSelect = document.getElementById('ordenSelect');
+    const grupoItemOrden = document.getElementById('grupoItemOrden');
+    const grupoProductoLibre = document.getElementById('grupoProductoLibre');
+    const itemOrdenSelect = document.getElementById('itemOrdenSelect');
+
+    ordenSelect.addEventListener('change', function () {
         const ordenId = this.value;
-        const productoSelect = document.getElementById('productoSelect');
-        productoSelect.innerHTML = '<option value="">Cargando productos...</option>';
 
         if (!ordenId) {
-            productoSelect.innerHTML = '<option value="">Seleccione una orden primero</option>';
+            // Mostrar productos sin orden
+            grupoItemOrden.style.display = 'none';
+            grupoProductoLibre.style.display = 'block';
             return;
         }
+
+        // Mostrar productos de la orden
+        grupoItemOrden.style.display = 'block';
+        grupoProductoLibre.style.display = 'none';
+        itemOrdenSelect.innerHTML = '<option value="">Cargando productos...</option>';
 
         fetch(`/ordenes/${ordenId}/items-json`)
             .then(res => res.json())
             .then(data => {
-                if (data.length === 0) {
-                    productoSelect.innerHTML = '<option value="">No hay productos</option>';
-                    return;
-                }
-
                 let options = '<option value="">Seleccione un producto</option>';
-                data.forEach(item => {
-                    options += `<option value="${item.id}">${item.nombre}</option>`;
+                data.forEach(p => {
+                    options += `<option value="${p.id}">${p.nombre}</option>`;
                 });
-
-                productoSelect.innerHTML = options;
+                itemOrdenSelect.innerHTML = options;
             })
             .catch(() => {
-                productoSelect.innerHTML = '<option value="">Error al cargar</option>';
+                itemOrdenSelect.innerHTML = '<option value="">Error al cargar</option>';
             });
     });
 </script>

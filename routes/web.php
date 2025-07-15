@@ -16,7 +16,8 @@ use App\Http\Controllers\{
     DevolucionController,
     ReporteRevisadoController,
     OrdenEtapaController,
-    UserController
+    UserController,
+    CategoriaController
 };
 
 // Página de bienvenida
@@ -64,6 +65,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::post('/clientes/ajax-store', [ClienteController::class, 'ajaxStore'])->name('clientes.ajaxStore');
+    Route::get('/productos/todos-json', function () {
+    return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
+});
 
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
@@ -154,5 +158,8 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
 Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::get('/reportes/revisado', [ReporteRevisadoController::class, 'index'])->name('reportes.revisado');
 });
+
+
+Route::resource('categorias', CategoriaController::class);
 
 require __DIR__ . '/auth.php';

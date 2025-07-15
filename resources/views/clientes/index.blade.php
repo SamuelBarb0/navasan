@@ -28,7 +28,7 @@
                             <tr>
                                 <th class="px-4 py-2 text-left">#</th>
                                 <th class="px-4 py-2 text-left">Nombre</th>
-                                <th class="px-4 py-2 text-left">NIT</th>
+                                <th class="px-4 py-2 text-left">RFC</th>
                                 <th class="px-4 py-2 text-left">Teléfono</th>
                                 <th class="px-4 py-2 text-left">Registrado</th>
                             </tr>
@@ -66,7 +66,7 @@
             <input type="text" name="nombre" id="nombre" class="form-control border-[#9EA1A2]" required>
         </div>
         <div class="mb-3">
-            <label for="nit" class="form-label text-[#16509D]">NIT</label>
+            <label for="nit" class="form-label text-[#16509D]">RCF</label>
             <input type="text" name="nit" id="nit" class="form-control border-[#9EA1A2]">
         </div>
         <div class="mb-3">

@@ -11,6 +11,7 @@ class Insumo extends Model
         'unidad',
         'descripcion',
         'estado',
+        'categoria_id',
     ];
 
     public function ordenes()
@@ -25,8 +26,12 @@ class Insumo extends Model
     }
 
     public function recepciones()
-{
-    return $this->hasMany(InsumoRecepcion::class);
-}
+    {
+        return $this->hasMany(InsumoRecepcion::class);
+    }
 
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
+    }
 }
