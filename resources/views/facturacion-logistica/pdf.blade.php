@@ -55,7 +55,7 @@
 
     <div class="section">
         <p class="info"><strong>Cliente:</strong> {{ $factura->orden->cliente->nombre }}</p>
-        <p class="info"><strong>NIT:</strong> {{ $factura->orden->cliente->nit ?? 'N/A' }}</p>
+        <p class="info"><strong>RFC:</strong> {{ $factura->orden->cliente->nit ?? 'N/A' }}</p>
         <p class="info"><strong>Teléfono:</strong> {{ $factura->orden->cliente->telefono ?? 'N/A' }}</p>
         <p class="info"><strong>Fecha de Orden:</strong> {{ \Carbon\Carbon::parse($factura->orden->fecha)->format('d/m/Y') }}</p>
     </div>
