@@ -28,7 +28,7 @@
                         </select>
                     </div>
 
-                    
+
 
                     {{-- Producto libre --}}
                     <div class="col-md-4" id="grupoProductoLibre" style="display: block;">
@@ -127,10 +127,10 @@
                             <td>
                                 @php
                                 $badgeClass = match($item->estado) {
-                                    'liberado' => 'bg-success',
-                                    'stock' => 'bg-info text-dark',
-                                    'pendiente' => 'bg-secondary',
-                                    default => 'bg-light text-muted'
+                                'liberado' => 'bg-success',
+                                'stock' => 'bg-info text-dark',
+                                'pendiente' => 'bg-secondary',
+                                default => 'bg-light text-muted'
                                 };
                                 @endphp
                                 <span class="badge {{ $badgeClass }}">{{ ucfirst($item->estado ?? 'sin estado') }}</span>
@@ -140,6 +140,15 @@
                                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditar{{ $item->id }}">
                                     <i class="bi bi-pencil-square"></i> Editar
                                 </button>
+                                {{-- Botón eliminar --}}
+                                <form id="form-eliminar-{{ $item->id }}" action="{{ route('inventario-etiquetas.destroy', $item) }}" method="POST" style="display: none;">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                                <button class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacionEtiqueta({{ $item->id }}, '{{ $item->id }}')">
+                                    <i class="bi bi-trash-fill"></i> Eliminar
+                                </button>
+
                                 @include('partials.modal-editar', ['etiqueta' => $item])
                             </td>
                         </tr>
@@ -155,14 +164,20 @@
         </div>
     </div>
 </div>
-
+<script>
+    function confirmarEliminacionEtiqueta(id, nombre) {
+        if (confirm(`¿Estás seguro de que deseas eliminar el registro #${nombre}? Esta acción no se puede deshacer.`)) {
+            document.getElementById(`form-eliminar-${id}`).submit();
+        }
+    }
+</script>
 <script>
     const ordenSelect = document.getElementById('ordenSelect');
     const grupoItemOrden = document.getElementById('grupoItemOrden');
     const grupoProductoLibre = document.getElementById('grupoProductoLibre');
     const itemOrdenSelect = document.getElementById('itemOrdenSelect');
 
-    ordenSelect.addEventListener('change', function () {
+    ordenSelect.addEventListener('change', function() {
         const ordenId = this.value;
 
         if (!ordenId) {

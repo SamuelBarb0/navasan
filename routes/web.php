@@ -17,7 +17,8 @@ use App\Http\Controllers\{
     ReporteRevisadoController,
     OrdenEtapaController,
     UserController,
-    CategoriaController
+    CategoriaController,
+    EtapaProduccionController
 };
 
 // Página de bienvenida
@@ -66,8 +67,8 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::post('/clientes/ajax-store', [ClienteController::class, 'ajaxStore'])->name('clientes.ajaxStore');
     Route::get('/productos/todos-json', function () {
-    return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
-});
+        return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
+    });
 
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
@@ -99,6 +100,7 @@ Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
     Route::post('/insumos', [InsumoController::class, 'store'])->name('insumos.store');
     Route::put('/insumos/{insumo}', [InsumoController::class, 'update'])->name('insumos.update');
     Route::post('/insumos/recepcion', [InsumoController::class, 'storeRecepcion'])->name('insumos.recepcion.store');
+    Route::delete('/insumos/{insumo}', [InsumoController::class, 'destroy'])->name('insumos.destroy');
 });
 
 // =========================
@@ -117,7 +119,6 @@ Route::middleware(['auth', 'role:acabados|administrador'])->group(function () {
     Route::get('/acabados', [AcabadoController::class, 'index'])->name('acabados.index');
     Route::post('/acabados', [AcabadoController::class, 'store'])->name('acabados.store');
     Route::put('/acabados/{id}', [AcabadoController::class, 'update'])->name('acabados.update');
-
 });
 
 // =========================
@@ -143,6 +144,8 @@ Route::middleware(['auth', 'role:logistica|administrador'])->group(function () {
 Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
     Route::resource('inventario-etiquetas', InventarioEtiquetaController::class);
     Route::put('/inventario-etiquetas/{id}', [InventarioEtiquetaController::class, 'update'])->name('inventario-etiquetas.update');
+    Route::delete('/inventario-etiquetas/{inventarioEtiqueta}', [InventarioEtiquetaController::class, 'destroy'])->name('inventario-etiquetas.destroy');
+
 });
 
 // =========================
@@ -158,6 +161,7 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
 Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::get('/reportes/revisado', [ReporteRevisadoController::class, 'index'])->name('reportes.revisado');
 });
+Route::resource('etapas', EtapaProduccionController::class);
 
 
 Route::resource('categorias', CategoriaController::class);

@@ -67,11 +67,10 @@ class InsumoController extends Controller
             'descripcion' => 'nullable|string',
             'categoria_id' => 'required|exists:categorias,id',
             'cantidad_actual' => 'nullable|numeric|min:0',
-            'activo' => 'required|boolean',
         ]);
 
         $insumo = Insumo::findOrFail($id);
-        $insumo->update($request->only(['nombre', 'unidad', 'descripcion', 'categoria_id', 'activo']));
+        $insumo->update($request->only(['nombre', 'unidad', 'descripcion', 'categoria_id']));
 
         // Actualizar inventario
         $inventario = InventarioInsumo::firstOrCreate(
@@ -144,6 +143,21 @@ class InsumoController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error en recepción de insumo: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Ocurrió un error al registrar la recepción.');
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $insumo = Insumo::findOrFail($id);
+
+            // Eliminar el insumo (si tienes relaciones con inventario, puedes borrar en cascada o usar soft delete)
+            $insumo->delete();
+
+            return redirect()->route('insumos.index')->with('success', 'Insumo eliminado correctamente.');
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar insumo: ' . $e->getMessage());
+            return redirect()->route('insumos.index')->with('error', 'Error al eliminar el insumo.');
         }
     }
 }

@@ -48,14 +48,6 @@
                             value="{{ $insumo->inventario?->cantidad_disponible ?? 0 }}"
                             step="any" min="0">
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Estado</label>
-                        <select name="activo" class="form-select">
-                            <option value="1" {{ $insumo->activo ? 'selected' : '' }}>Activo</option>
-                            <option value="0" {{ !$insumo->activo ? 'selected' : '' }}>Inactivo</option>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="modal-footer bg-light rounded-bottom-4">

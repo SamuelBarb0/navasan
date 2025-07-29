@@ -55,18 +55,30 @@
                                     <td class="text-center fw-bold">
                                         {{ number_format($insumo->inventario?->cantidad_disponible ?? 0, 2) }}
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center d-flex justify-content-center gap-2">
+                                        {{-- Editar --}}
                                         <button class="btn btn-sm" style="border: 1px solid #0578BE; color: #0578BE"
                                             data-bs-toggle="modal"
                                             data-bs-target="#editarInsumoModal{{ $insumo->id }}">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
 
+                                        {{-- Recepción --}}
                                         <button class="btn btn-sm" style="border: 1px solid #9EA1A2; color: #9EA1A2"
                                             data-bs-toggle="modal"
                                             data-bs-target="#modalRecepcionInsumo"
                                             onclick="setInsumoRecepcion({{ $insumo->id }})">
                                             <i class="bi bi-truck"></i>
+                                        </button>
+
+                                        {{-- Eliminar --}}
+                                        <form id="form-eliminar-{{ $insumo->id }}" action="{{ route('insumos.destroy', $insumo) }}" method="POST" style="display: none;">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
+                                        <button class="btn btn-sm" style="border: 1px solid #dc3545; color: #dc3545"
+                                            onclick="confirmarEliminacion({{ $insumo->id }}, '{{ $insumo->nombre }}')">
+                                            <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -82,9 +94,16 @@
     </div>
 </div>
 
+{{-- JS --}}
 <script>
     function setInsumoRecepcion(id) {
         document.getElementById('recepcion_insumo_id').value = id;
+    }
+
+    function confirmarEliminacion(id, nombre) {
+        if (confirm(`¿Estás seguro de que deseas eliminar el insumo "${nombre}"? Esta acción no se puede deshacer.`)) {
+            document.getElementById(`form-eliminar-${id}`).submit();
+        }
     }
 </script>
 

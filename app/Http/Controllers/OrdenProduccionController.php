@@ -92,9 +92,10 @@ class OrdenProduccionController extends Controller
             return $query->where('cliente_id', $cliente_id);
         })->get();
 
-        return view('ordenes.create', compact('clientes', 'productos', 'cliente_id'));
-    }
+        $etapas = EtapaProduccion::all();
 
+        return view('ordenes.create', compact('clientes', 'productos', 'cliente_id', 'etapas'));
+    }
 
     public function store(Request $request)
     {
@@ -109,6 +110,8 @@ class OrdenProduccionController extends Controller
             'items.*.entregas' => 'nullable|array',
             'items.*.entregas.*.fecha' => 'required|date',
             'items.*.entregas.*.cantidad' => 'required|integer|min:1',
+            'etapas' => 'required|array|min:1',
+            'etapas.*' => 'exists:etapa_produccions,id',
         ]);
 
         // Crear la orden
@@ -139,18 +142,20 @@ class OrdenProduccionController extends Controller
             }
         }
 
-        // Crear etapas de producción asociadas
-        $etapas = EtapaProduccion::orderBy('orden')->get();
-        foreach ($etapas as $etapa) {
+        // Crear etapas seleccionadas
+        foreach ($data['etapas'] as $etapaId) {
+            $etapa = EtapaProduccion::find($etapaId);
+
             OrdenEtapa::create([
                 'orden_produccion_id' => $orden->id,
                 'etapa_produccion_id' => $etapa->id,
                 'estado' => 'pendiente',
-                'usuario_id' => $etapa->usuario_id,
+                'usuario_id' => $etapa->usuario_id, // puede ser null si no se define
             ]);
         }
 
-        return redirect()->route('ordenes.index')->with('success', 'Orden creada con sus productos, entregas y etapas correctamente.');
+        return redirect()->route('ordenes.index')
+            ->with('success', 'Orden creada con sus productos, entregas y etapas correctamente.');
     }
 
     public function productosDeOrden($id)
@@ -193,6 +198,4 @@ class OrdenProduccionController extends Controller
 
         return redirect()->route('ordenes.index')->with('success', 'Orden eliminada correctamente.');
     }
-
-    
 }
