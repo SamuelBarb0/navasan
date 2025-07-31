@@ -15,9 +15,9 @@
                         <label class="form-label">Orden</label>
                         <select name="orden_id" class="form-select" required>
                             @foreach(\App\Models\OrdenProduccion::all() as $orden)
-                                <option value="{{ $orden->id }}" {{ $orden->id == $item->orden_id ? 'selected' : '' }}>
-                                    {{ $orden->numero_orden }}
-                                </option>
+                            <option value="{{ $orden->id }}" {{ $orden->id == $item->orden_id ? 'selected' : '' }}>
+                                {{ $orden->numero_orden }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -38,7 +38,7 @@
 
                         <div class="mt-2 {{ !in_array($item->maquina, ['MO', 'GTO']) ? '' : 'd-none' }}" id="otraMaquinaDiv{{ $item->id }}">
                             <input type="text" class="form-control" id="otraMaquinaInput{{ $item->id }}"
-                                   placeholder="Especifique la máquina" value="{{ !in_array($item->maquina, ['MO', 'GTO']) ? $item->maquina : '' }}">
+                                placeholder="Especifique la máquina" value="{{ !in_array($item->maquina, ['MO', 'GTO']) ? $item->maquina : '' }}">
                         </div>
 
                         <!-- Este input es el que se envía realmente -->
@@ -51,15 +51,22 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label">Cantidad de pliegos impresos</label>
+                        <input type="number" name="cantidad_pliegos_impresos" class="form-control"
+                            value="{{ $item->cantidad_pliegos_impresos ?? '' }}" min="0">
+                    </div>
+
+
+                    <div class="mb-3">
                         <label class="form-label">Inicio</label>
                         <input type="datetime-local" name="inicio_impresion" class="form-control"
-                               value="{{ \Carbon\Carbon::parse($item->inicio_impresion)->format('Y-m-d\TH:i') }}">
+                            value="{{ \Carbon\Carbon::parse($item->inicio_impresion)->format('Y-m-d\TH:i') }}">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Fin</label>
                         <input type="datetime-local" name="fin_impresion" class="form-control"
-                               value="{{ \Carbon\Carbon::parse($item->fin_impresion)->format('Y-m-d\TH:i') }}">
+                            value="{{ $item->fin_impresion ? \Carbon\Carbon::parse($item->fin_impresion)->format('Y-m-d\TH:i') : '' }}">
                     </div>
 
                     <div class="mb-3">
@@ -84,7 +91,7 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.maquina-select').forEach(select => {
             const id = select.dataset.id;
             const otraDiv = document.getElementById('otraMaquinaDiv' + id);

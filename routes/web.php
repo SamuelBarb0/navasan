@@ -151,7 +151,7 @@ Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
 // =========================
 // DEVOLUCIONES
 // =========================
-Route::middleware(['auth', 'role:administrador'])->group(function () {
+Route::middleware(['auth', 'role:devoluciones|administrador'])->group(function () {
     Route::resource('devoluciones', DevolucionController::class)->only(['index', 'store']);
 });
 

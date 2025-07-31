@@ -19,6 +19,16 @@ class OrdenEtapaController extends Controller
             return redirect()->route('ordenes.show', $orden->id)->with('error', 'Ya hay una etapa activa en proceso.');
         }
 
+        // Verifica si hay etapas anteriores que no estén completadas
+        $etapasOrdenadas = $orden->etapas()->orderBy('id')->get();
+        $indiceActual = $etapasOrdenadas->search(fn($e) => $e->id === $etapa->id);
+
+        $hayAnteriorIncompleta = $etapasOrdenadas->slice(0, $indiceActual)->contains(fn($e) => $e->estado !== 'completado');
+
+        if ($hayAnteriorIncompleta) {
+            return redirect()->route('ordenes.show', $orden->id)->with('error', 'Debes completar las etapas anteriores antes de iniciar esta.');
+        }
+
         // Inicia esta etapa
         $etapa->update([
             'estado' => 'en_proceso',
@@ -30,24 +40,6 @@ class OrdenEtapaController extends Controller
             'etapa_actual' => $etapa->etapa->nombre,
             'estado' => 'en_proceso',
         ]);
-
-        // 🔁 Si se inicia "Acabados", añadir las sub-etapas
-        if ($etapa->etapa->nombre === 'Acabados') {
-            $subEtapas = ['Laminado Mate / Brillante', 'Empalmado'];
-
-            foreach ($subEtapas as $nombre) {
-                $etapaProduccion = \App\Models\EtapaProduccion::where('nombre', $nombre)->first();
-
-                if ($etapaProduccion && !$orden->etapas()->where('etapa_produccion_id', $etapaProduccion->id)->exists()) {
-                    \App\Models\OrdenEtapa::create([
-                        'orden_produccion_id' => $orden->id,
-                        'etapa_produccion_id' => $etapaProduccion->id,
-                        'estado' => 'pendiente',
-                        'usuario_id' => $etapaProduccion->usuario_id, // asignar responsable
-                    ]);
-                }
-            }
-        }
 
         return redirect()->route('ordenes.show', $orden->id)->with('success', 'Etapa iniciada correctamente.');
     }

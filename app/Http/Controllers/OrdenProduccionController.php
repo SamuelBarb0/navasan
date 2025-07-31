@@ -99,9 +99,10 @@ class OrdenProduccionController extends Controller
 
     public function store(Request $request)
     {
+        // Validación general (sin validar aún el número duplicado)
         $data = $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
-            'numero_orden' => 'required|unique:orden_produccions',
+            'numero_orden' => 'required|string',
             'fecha' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'nullable|exists:productos,id',
@@ -114,6 +115,13 @@ class OrdenProduccionController extends Controller
             'etapas.*' => 'exists:etapa_produccions,id',
         ]);
 
+        // Verificar si ya existe una orden con el mismo número
+        if (OrdenProduccion::where('numero_orden', $data['numero_orden'])->exists()) {
+            return redirect()->back()
+                ->withInput()
+                ->with('warning', '⚠️ Ya existe una orden con el número <strong>#' . $data['numero_orden'] . '</strong>. Por favor usa otro.');
+        }
+
         // Crear la orden
         $orden = OrdenProduccion::create([
             'cliente_id' => $data['cliente_id'],
@@ -122,7 +130,7 @@ class OrdenProduccionController extends Controller
             'estado' => 'pendiente',
         ]);
 
-        // Crear los ítems y sus entregas
+        // Resto igual...
         foreach ($data['items'] as $item) {
             $itemOrden = ItemOrden::create([
                 'orden_produccion_id' => $orden->id,
@@ -142,7 +150,6 @@ class OrdenProduccionController extends Controller
             }
         }
 
-        // Crear etapas seleccionadas
         foreach ($data['etapas'] as $etapaId) {
             $etapa = EtapaProduccion::find($etapaId);
 
@@ -150,7 +157,7 @@ class OrdenProduccionController extends Controller
                 'orden_produccion_id' => $orden->id,
                 'etapa_produccion_id' => $etapa->id,
                 'estado' => 'pendiente',
-                'usuario_id' => $etapa->usuario_id, // puede ser null si no se define
+                'usuario_id' => $etapa->usuario_id,
             ]);
         }
 

@@ -49,18 +49,13 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Cantidad de pliegos impresos</label>
+                        <label class="form-label">Cantidad de pliegos solicitados</label>
                         <input type="number" name="cantidad_pliegos" class="form-control" required min="1">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Inicio de impresión</label>
                         <input type="datetime-local" name="inicio_impresion" class="form-control" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Fin de impresión</label>
-                        <input type="datetime-local" name="fin_impresion" class="form-control" required>
                     </div>
 
                     <div class="mb-3">

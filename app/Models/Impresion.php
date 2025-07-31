@@ -13,6 +13,7 @@ class Impresion extends Model
         'tipo_impresion',
         'maquina',
         'cantidad_pliegos',
+        'cantidad_pliegos_impresos',
         'inicio_impresion',
         'fin_impresion',
         'estado',
