@@ -73,13 +73,21 @@ class InventarioEtiquetaController extends Controller
 
         return view('inventario-etiquetas.edit', compact('inventario', 'ordenes', 'productos'));
     }
-    /**
-     * Actualiza el inventario con clave de administrador.
-     */
+
     public function update(Request $request, $id)
     {
         Log::debug('🔧 Iniciando actualización de etiqueta', ['etiqueta_id' => $id]);
         Log::debug('📥 Datos recibidos para actualizar:', $request->all());
+
+        // Validar que el usuario tenga el rol 'etiquetador' o 'administrador'
+        if (!auth()->user()->hasAnyRole(['etiquetador', 'administrador'])) {
+            Log::warning('🚫 Usuario sin rol autorizado intentó actualizar', [
+                'user_id' => auth()->id(),
+                'user_email' => auth()->user()->email,
+            ]);
+
+            return redirect()->back()->with('error', 'No tienes permiso para actualizar etiquetas.');
+        }
 
         $request->validate([
             'orden_id'         => 'nullable|exists:orden_produccions,id',
@@ -89,15 +97,7 @@ class InventarioEtiquetaController extends Controller
             'fecha_programada' => 'nullable|date',
             'observaciones'    => 'nullable|string|max:1000',
             'estado'           => 'required|in:pendiente,liberado,stock',
-            'admin_password'   => 'required|string',
         ]);
-
-        $admin = User::where('email', 'admin@etiquetas.com')->first();
-
-        if (!$admin || !Hash::check($request->admin_password, $admin->password)) {
-            Log::warning('❌ Falló la validación de contraseña de administrador');
-            return back()->withErrors(['admin_password' => 'Contraseña de administrador incorrecta.'])->withInput();
-        }
 
         $etiqueta = InventarioEtiqueta::findOrFail($id);
 

@@ -1,5 +1,5 @@
 <div class="modal fade" id="modalRegistrarRevision" tabindex="-1" aria-labelledby="modalRegistrarRevisionLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <form method="POST" action="{{ route('revisiones.store') }}">
             @csrf
             <div class="modal-content">
@@ -9,6 +9,7 @@
                 </div>
 
                 <div class="modal-body" style="background-color: #f8f9fa;">
+                    <!-- Orden de Producción -->
                     <div class="mb-3">
                         <label class="form-label">Orden de Producción</label>
                         <select name="orden_id" class="form-select" required>
@@ -19,17 +20,27 @@
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Revisado por</label>
-                        <input type="text" name="revisado_por" class="form-control" placeholder="Nombre de quien revisó" required>
-                    </div>
+                    <hr>
+                    <h6 class="text-primary">Revisores (hasta 5)</h6>
 
+                    @for($i = 0; $i < 5; $i++)
+                        <div class="row border rounded p-2 mb-3 bg-white shadow-sm align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre del revisor {{ $i+1 }}</label>
+                                <input type="text" name="revisores[{{ $i }}][revisado_por]" class="form-control" placeholder="Ej: Juan Pérez">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cantidad revisada</label>
+                                <input type="number" name="revisores[{{ $i }}][cantidad]" class="form-control" min="1">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Comentario</label>
+                                <input type="text" name="revisores[{{ $i }}][comentarios]" class="form-control" placeholder="Observaciones (opcional)">
+                            </div>
+                        </div>
+                    @endfor
 
-                    <div class="mb-3">
-                        <label class="form-label">Cantidad revisada</label>
-                        <input type="number" name="cantidad" class="form-control" min="1" required>
-                    </div>
-
+                    <!-- Tipo de revisión -->
                     <div class="mb-3">
                         <label class="form-label">Tipo de revisión</label>
                         <select name="tipo" class="form-select" required>
@@ -40,15 +51,10 @@
                             <option value="rechazada">❌ Rechazada</option>
                         </select>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Comentarios</label>
-                        <textarea name="comentarios" class="form-control" rows="3"></textarea>
-                    </div>
                 </div>
 
                 <div class="modal-footer bg-light rounded-bottom-4">
-                    <button type="submit" class="btn" style="background-color: #0578BE; color: #ffff;">
+                    <button type="submit" class="btn" style="background-color: #0578BE; color: #fff;">
                         <i class="bi bi-check-circle"></i> Guardar
                     </button>
                 </div>

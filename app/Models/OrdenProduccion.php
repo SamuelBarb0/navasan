@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrdenProduccion extends Model
 {
+    protected $table = 'orden_produccions'; // o el nombre correcto real
+
     protected $fillable = [
         'cliente_id',
         'numero_orden',

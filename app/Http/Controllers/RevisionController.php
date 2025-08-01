@@ -20,14 +20,26 @@ class RevisionController extends Controller
     {
         $request->validate([
             'orden_id' => 'required|exists:orden_produccions,id',
-            'revisado_por' => 'required|string|max:100',
-            'cantidad' => 'required|integer|min:1',
-            'tipo' => 'required|in:correcta,defectos,apartada,rechazada',
-            'comentarios' => 'nullable|string|max:1000',
+            'tipo' => 'required|string',
+            'comentarios' => 'nullable|string',
+            'revisores' => 'required|array',
+            'revisores.*.revisado_por' => 'nullable|string',
+            'revisores.*.cantidad' => 'nullable|integer|min:1',
+            'revisores.*.comentarios' => 'nullable|string',
         ]);
 
-        Revision::create($request->all());
+        foreach ($request->revisores as $revisor) {
+            if (!empty($revisor['revisado_por']) && !empty($revisor['cantidad'])) {
+                Revision::create([
+                    'orden_id'     => $request->orden_id,
+                    'revisado_por' => $revisor['revisado_por'],
+                    'cantidad'     => $revisor['cantidad'],
+                    'comentarios'  => $revisor['comentarios'] ?? null,
+                    'tipo'         => $request->tipo,
+                ]);
+            }
+        }
 
-        return redirect()->back()->with('success', 'Revisión registrada correctamente.');
+        return redirect()->back()->with('success', 'Revisiones registradas correctamente.');
     }
 }

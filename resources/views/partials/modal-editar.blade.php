@@ -58,19 +58,6 @@
                     </div>
 
                     <hr class="my-3">
-
-                    {{-- Contraseña --}}
-                    <div class="mb-3">
-                        <label class="form-label text-danger">
-                            <i class="bi bi-lock-fill me-1"></i> Contraseña de administrador
-                        </label>
-                        <input type="password" name="admin_password" class="form-control border-danger rounded-3" placeholder="Requerida para editar" required>
-                        @error('admin_password')
-                            <small class="text-danger d-block mt-1">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
-                            </small>
-                        @enderror
-                    </div>
                 </div>
 
                 <div class="modal-footer bg-light border-top-0 rounded-bottom-4 px-4 py-3">
