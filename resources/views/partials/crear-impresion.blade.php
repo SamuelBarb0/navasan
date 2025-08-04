@@ -14,8 +14,8 @@
                         <label class="form-label">Orden de Producción</label>
                         <select name="orden_id" class="form-select" required>
                             <option value="">Seleccione una orden</option>
-                            @foreach(\App\Models\OrdenProduccion::latest()->take(10)->get() as $orden)
-                                <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
+                            @foreach(\App\Models\OrdenProduccion::ordenesListasParaEtapa('Impresión') as $orden)
+                            <option value="{{ $orden->id }}">{{ $orden->numero_orden }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -80,7 +80,7 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         // Modal de creación
         const selectCrear = document.getElementById('maquinaSelectCrear');
         const inputCrear = document.getElementById('otraMaquinaInputCrear');

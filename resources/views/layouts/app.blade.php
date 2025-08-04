@@ -37,6 +37,7 @@
 
     <x-toasts.impresiones-pendientes />
     <x-toasts.alertas-impresion />
+    <x-toasts.revision-pendiente />
 
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

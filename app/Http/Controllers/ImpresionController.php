@@ -4,14 +4,62 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Impresion;
+use App\Models\EtapaProduccion;
+use App\Models\OrdenProduccion;
+use Illuminate\Support\Facades\DB;
+
 
 class ImpresionController extends Controller
 {
     public function index()
     {
+        $usuario = auth()->user();
+
+        // 👑 Administrador: ver todo
+        if ($usuario->hasRole('administrador')) {
+            $impresiones = Impresion::with('orden')->latest()->get();
+            $ordenes = OrdenProduccion::latest()->take(20)->get();
+            return view('impresiones.index', compact('impresiones', 'ordenes'));
+        }
+
+        // 🧑‍🔧 Responsable: buscar etapa "Impresión" asignada a él
+        $etapa = EtapaProduccion::where('usuario_id', $usuario->id)
+            ->where('nombre', 'Impresión')
+            ->first();
+
+        if (!$etapa) {
+            return view('impresiones.index', [
+                'impresiones' => Impresion::with('orden')->latest()->get(),
+                'ordenes' => collect(),
+            ]);
+        }
+
+        $etapaId = $etapa->id;
+        $ordenEtapa = $etapa->orden;
+
+        $ordenes = OrdenProduccion::with('cliente')
+            ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
+                $q->where('etapa_produccion_id', $etapaId)
+                    ->where('usuario_id', $usuario->id)
+                    ->where('estado', 'pendiente')
+                    ->whereNotExists(function ($subquery) use ($ordenEtapa) {
+                        $subquery->select(DB::raw(1))
+                            ->from('orden_etapas as anteriores')
+                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
+                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
+                            ->where('ep.orden', '<', $ordenEtapa)
+                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
+                    });
+            })
+            ->latest()
+            ->take(20)
+            ->get();
+
         $impresiones = Impresion::with('orden')->latest()->get();
-        return view('impresiones.index', compact('impresiones'));
+
+        return view('impresiones.index', compact('impresiones', 'ordenes'));
     }
+
 
     public function store(Request $request)
     {

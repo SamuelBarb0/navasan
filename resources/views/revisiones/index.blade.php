@@ -25,6 +25,18 @@
             </div>
             @endif
 
+            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+                <div id="toastAlertaRevision" class="toast align-items-center text-bg-warning border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body fw-bold">
+                            ⚠️ Por favor revisar revisión de <span id="ordenAlerta"></span>.
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                    </div>
+                </div>
+            </div>
+
+
             @if($revisiones->isEmpty())
             <div class="alert alert-info">No hay revisiones registradas aún.</div>
             @else
@@ -38,6 +50,7 @@
                             <th>Tipo</th>
                             <th>Comentarios</th>
                             <th>Fecha</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,6 +75,20 @@
                             </td>
                             <td>{{ $rev->comentarios ?? '—' }}</td>
                             <td>{{ $rev->created_at->format('d/m/Y H:i') }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarRevision{{ $rev->id }}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger me-1" data-bs-toggle="modal" data-bs-target="#modalEliminarRevision{{ $rev->id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <form action="{{ route('revisiones.alerta', $rev->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button class="btn btn-sm btn-warning">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -72,5 +99,21 @@
     </div>
 </div>
 
+{{-- Modales individuales --}}
+@include('revisiones.partials._modal_edit')
+@include('revisiones.partials._modal_delete')
 @include('partials.modal-registrar')
+
+<script>
+    function mostrarAlerta(nombreOrden) {
+        const toastEl = document.getElementById('toastAlertaRevision');
+        const ordenSpan = document.getElementById('ordenAlerta');
+        ordenSpan.textContent = nombreOrden;
+        const toast = new bootstrap.Toast(toastEl, {
+            delay: 5000
+        });
+        toast.show();
+    }
+</script>
+
 @endsection

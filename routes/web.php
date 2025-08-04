@@ -20,6 +20,7 @@ use App\Http\Controllers\{
     CategoriaController,
     EtapaProduccionController
 };
+use Illuminate\Support\Facades\Cache;
 
 // Página de bienvenida
 Route::get('/', function () {
@@ -127,6 +128,9 @@ Route::middleware(['auth', 'role:acabados|administrador'])->group(function () {
 Route::middleware(['auth', 'role:revision|administrador'])->group(function () {
     Route::get('/revisiones', [RevisionController::class, 'index'])->name('revisiones.index');
     Route::post('/store', [RevisionController::class, 'store'])->name('revisiones.store');
+    Route::put('/revisiones/{id}', [RevisionController::class, 'update'])->name('revisiones.update');
+    Route::delete('/revisiones/{id}', [RevisionController::class, 'destroy'])->name('revisiones.destroy');
+    Route::post('/revisiones/{id}/alerta', [RevisionController::class, 'alerta'])->name('revisiones.alerta');
 });
 
 // =========================
@@ -165,5 +169,8 @@ Route::resource('etapas', EtapaProduccionController::class);
 
 
 Route::resource('categorias', CategoriaController::class);
-
+Route::get('/revisiones/limpiar-toast', function () {
+    Cache::forget('toast_revision_ordenes');
+    return response()->json(['status' => 'ok']);
+})->name('revisiones.limpiar.toast');
 require __DIR__ . '/auth.php';

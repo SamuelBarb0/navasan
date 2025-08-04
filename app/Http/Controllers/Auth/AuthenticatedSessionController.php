@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use App\Models\Impresion;
+use App\Models\Revision;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -19,13 +20,13 @@ class AuthenticatedSessionController extends Controller
     {
         return view('auth.login');
     }
-
+    
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
         $request->session()->regenerate();
 
-        // Toasts para pliegos impresos diferentes
+        // 🔶 Toast para impresiones con pliegos distintos
         $diferencias = Impresion::with('orden')
             ->whereNotNull('cantidad_pliegos')
             ->whereNotNull('cantidad_pliegos_impresos')
@@ -45,10 +46,21 @@ class AuthenticatedSessionController extends Controller
             session()->flash('toast_pliegos_diferentes', $mensajesToast->toArray());
         }
 
+        // ✅ Toast para revisiones pendientes
+        $revisionesPendientes = Revision::with('orden')
+            ->whereIn('tipo', ['apartada', 'rechazada'])
+            ->latest()
+            ->exists();
+
+        if ($revisionesPendientes) {
+            session()->flash('mostrar_toast_revision', true);
+        }
+
         session()->flash('mostrar_toast_impresion', true);
 
         return redirect()->intended(route('impresiones.index'));
     }
+
 
 
     /**

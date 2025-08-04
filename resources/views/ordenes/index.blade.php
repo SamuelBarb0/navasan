@@ -27,11 +27,11 @@
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-header text-white d-flex justify-content-between align-items-center rounded-top-4" style="background-color: #16509D;">
             <h4 class="mb-0"><i class="bi bi-clipboard-data me-2"></i> Órdenes de Producción</h4>
-            @if($esAdmin)
+            @hasanyrole('administrador|preprensa')
             <a href="{{ route('ordenes.create') }}" class="btn btn-sm text-white" style="background-color: #0578BE;">
                 <i class="bi bi-plus-circle"></i> Nueva Orden
             </a>
-            @endif
+            @endhasanyrole
         </div>
 
         <div class="card-body bg-light rounded-bottom-4">
@@ -142,7 +142,7 @@
                                 <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Ver
                                 </a>
-                                @if($esAdmin || Auth::user()->hasRole('preprensa'))
+                                @hasanyrole('administrador|preprensa')
                                 <form action="{{ route('ordenes.destroy', $orden->id) }}" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta orden de producción? Esta acción no se puede deshacer.');">
                                     @csrf
                                     @method('DELETE')
@@ -150,7 +150,7 @@
                                         <i class="bi bi-trash"></i> Eliminar
                                     </button>
                                 </form>
-                                @endif
+                                @endhasanyrole
                             </td>
                         </tr>
                         @endforeach

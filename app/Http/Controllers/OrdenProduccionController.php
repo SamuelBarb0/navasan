@@ -11,7 +11,7 @@ use App\Models\EtapaProduccion;
 use App\Models\OrdenEtapa;
 use App\Models\ItemEntrega;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
 
@@ -21,7 +21,32 @@ class OrdenProduccionController extends Controller
     {
         $busqueda = $request->input('busqueda');
         $usuario = auth()->user();
-        $esAdmin = $usuario->hasAnyRole(['administrador', 'preprensa']);
+
+        // Obtener todas las etapas asignadas al usuario actual
+        $etapasAsignadas = \App\Models\EtapaProduccion::where('usuario_id', $usuario->id)->get();
+
+        // Obtener los IDs y órdenes de las etapas del usuario
+        $etapaIds = $etapasAsignadas->pluck('id')->toArray();
+        $ordenesEtapas = $etapasAsignadas->pluck('orden', 'id')->toArray(); // [etapa_id => orden]
+
+        // Función para aplicar la lógica solo si el usuario no es administrador o preprensa
+        $filtroEtapas = function ($query) use ($etapaIds, $ordenesEtapas, $usuario) {
+            $query->whereHas('etapas', function ($q) use ($etapaIds, $ordenesEtapas, $usuario) {
+                $q->whereIn('etapa_produccion_id', $etapaIds)
+                    ->where('usuario_id', $usuario->id) // 👈 Asegura que sea del usuario
+                    ->where('estado', 'pendiente')
+                    ->whereNotExists(function ($subquery) use ($ordenesEtapas) {
+                        $minOrden = min($ordenesEtapas);
+                        $subquery->select(DB::raw(1))
+                            ->from('orden_etapas as anteriores')
+                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
+                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
+                            ->where('ep.orden', '<', $minOrden)
+                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
+                    });
+            });
+        };
+
 
         // Órdenes normales
         $ordenes = \App\Models\OrdenProduccion::with('cliente')
@@ -33,11 +58,7 @@ class OrdenProduccionController extends Controller
                         });
                 });
             })
-            ->when(!$esAdmin, function ($query) use ($usuario) {
-                $query->whereHas('etapas', function ($q) use ($usuario) {
-                    $q->where('usuario_id', $usuario->id);
-                });
-            })
+            ->when(!$usuario->hasRole('administrador'), $filtroEtapas)
             ->where(function ($q) {
                 $q->where('urgente', false)->orWhereNull('urgente');
             })
@@ -55,16 +76,15 @@ class OrdenProduccionController extends Controller
                         });
                 });
             })
-            ->when(!$esAdmin, function ($query) use ($usuario) {
-                $query->whereHas('etapas', function ($q) use ($usuario) {
-                    $q->where('usuario_id', $usuario->id);
-                });
-            })
+            ->when(!$usuario->hasRole('administrador'), $filtroEtapas)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('ordenes.index', compact('ordenes', 'devoluciones', 'esAdmin'));
+
+        return view('ordenes.index', compact('ordenes', 'devoluciones'));
     }
+
+
 
     public function show($id)
     {
