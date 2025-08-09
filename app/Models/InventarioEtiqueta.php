@@ -23,4 +23,9 @@ class InventarioEtiqueta extends Model
     {
         return $this->belongsTo(Producto::class);
     }
+
+    public function cliente()
+    {
+        return $this->belongsTo(\App\Models\Cliente::class, 'cliente_id');
+    }
 }

@@ -98,67 +98,69 @@
     </div>
 
     {{-- Devoluciones Urgentes --}}
-    <div class="card border-0 shadow-sm rounded-4 mt-5">
-        <div class="card-header text-white d-flex align-items-center rounded-top-4" style="background-color: #B02A37;">
-            <h4 class="mb-0"><i class="bi bi-arrow-counterclockwise me-2"></i> Devoluciones Urgentes</h4>
-        </div>
+<div class="card border-0 shadow-sm rounded-4 mt-5">
+    <div class="card-header text-white d-flex align-items-center rounded-top-4" style="background-color: #B02A37;">
+        <h4 class="mb-0"><i class="bi bi-arrow-counterclockwise me-2"></i> Devoluciones Urgentes</h4>
+    </div>
 
-        <div class="card-body bg-light rounded-bottom-4">
-            @if($devoluciones->isEmpty())
-            <div class="alert alert-info">No hay devoluciones urgentes registradas.</div>
-            @else
-            <div class="table-responsive">
-                <table class="table table-hover table-bordered align-middle shadow-sm">
-                    <thead style="background-color: #f8d7da;" class="text-dark">
-                        <tr class="text-center">
-                            <th>Número</th>
-                            <th>Cliente</th>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($devoluciones as $orden)
-                        <tr class="text-center" style="background-color: #f8d7da;">
-                            <td class="fw-semibold text-danger">{{ $orden->numero_orden }}</td>
-                            <td>{{ $orden->cliente->nombre }}</td>
-                            <td>{{ \Carbon\Carbon::parse($orden->fecha)->format('d/m/Y') }}</td>
-                            <td>
-                                @php
-                                $estadoColor = match($orden->estado) {
+    <div class="card-body bg-light rounded-bottom-4">
+        @if($devoluciones->isEmpty())
+        <div class="alert alert-info">No hay devoluciones urgentes registradas.</div>
+        @else
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle shadow-sm">
+                <thead style="background-color: #f8d7da;" class="text-dark">
+                    <tr class="text-center">
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Motivo de Devolución</th> {{-- ✅ Nueva columna --}}
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($devoluciones as $orden)
+                    <tr class="text-center" style="background-color: #f8d7da;">
+                        <td class="fw-semibold text-danger">{{ $orden->numero_orden }}</td>
+                        <td>{{ $orden->cliente->nombre }}</td>
+                        <td>{{ \Carbon\Carbon::parse($orden->fecha)->format('d/m/Y') }}</td>
+                        <td>{{ $orden->comentarios ?? '—' }}</td> {{-- ✅ Mostrar motivo_cliente --}}
+                        <td>
+                            @php
+                            $estadoColor = match($orden->estado) {
                                 'pendiente' => 'secondary',
                                 'en_proceso' => 'info',
                                 'completado' => 'success',
                                 'rechazado' => 'danger',
                                 default => 'dark'
-                                };
-                                @endphp
-                                <span class="badge bg-{{ $estadoColor }} px-3 py-2 rounded-pill text-capitalize">
-                                    {{ str_replace('_', ' ', $orden->estado) }}
-                                </span>
-                            </td>
-                            <td class="d-flex justify-content-center gap-2">
-                                <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i> Ver
-                                </a>
-                                @hasanyrole('administrador|preprensa')
-                                <form action="{{ route('ordenes.destroy', $orden->id) }}" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta orden de producción? Esta acción no se puede deshacer.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                </form>
-                                @endhasanyrole
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @endif
+                            };
+                            @endphp
+                            <span class="badge bg-{{ $estadoColor }} px-3 py-2 rounded-pill text-capitalize">
+                                {{ str_replace('_', ' ', $orden->estado) }}
+                            </span>
+                        </td>
+                        <td class="d-flex justify-content-center gap-2">
+                            <a href="{{ route('ordenes.show', $orden->id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Ver
+                            </a>
+                            @hasanyrole('administrador|preprensa')
+                            <form action="{{ route('ordenes.destroy', $orden->id) }}" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta orden de producción? Esta acción no se puede deshacer.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </form>
+                            @endhasanyrole
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
+        @endif
     </div>
 </div>
+
 @endsection

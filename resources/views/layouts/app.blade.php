@@ -38,6 +38,8 @@
     <x-toasts.impresiones-pendientes />
     <x-toasts.alertas-impresion />
     <x-toasts.revision-pendiente />
+    <x-toasts.suaje-alerta /> {{-- 🔹 Nuevo --}}
+    <x-toasts.suaje-desfase /> {{-- 🔹 Nuevo: alerta “liberada < impresa” --}}
 
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

@@ -1,6 +1,9 @@
 <div class="modal fade" id="modalEditar{{ $etiqueta->id }}" tabindex="-1" aria-labelledby="modalLabel{{ $etiqueta->id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-        <form method="POST" action="{{ route('inventario-etiquetas.update', $etiqueta->id) }}" class="w-100">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <form method="POST"
+              action="{{ route('inventario-etiquetas.update', $etiqueta->id) }}"
+              class="w-100"
+              enctype="multipart/form-data">
             @csrf
             @method('PUT')
             <input type="hidden" name="orden_id" value="{{ $etiqueta->orden_id }}">
@@ -8,12 +11,23 @@
             <div class="modal-content shadow-lg rounded-4 border-0">
                 <div class="modal-header text-white rounded-top-4" style="background-color: #16509D;">
                     <h5 class="modal-title">
-                        <i class="bi bi-shield-lock-fill me-2"></i> Editar Inventario (#{{ $etiqueta->id }})
+                        <i class="bi bi-pencil-square me-2"></i> Editar Inventario (#{{ $etiqueta->id }})
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
 
                 <div class="modal-body px-4 py-3">
+
+                    {{-- Cliente (opcional) --}}
+                    <div class="mb-3">
+                        <label class="form-label">Cliente (opcional)</label>
+                        <select name="cliente_id" class="form-select rounded-3">
+                            <option value="">Sin cliente</option>
+                            @foreach(($clientes ?? []) as $c)
+                                <option value="{{ $c->id }}" @selected($etiqueta->cliente_id == $c->id)>{{ $c->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
                     {{-- Producto --}}
                     <div class="mb-3">
@@ -47,7 +61,7 @@
                         <textarea name="observaciones" class="form-control rounded-3" rows="2">{{ $etiqueta->observaciones }}</textarea>
                     </div>
 
-                    {{-- Estado --}}
+                    {{-- Estado (nuevo) --}}
                     <div class="mb-3">
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-select rounded-3" required>
@@ -55,6 +69,29 @@
                             <option value="stock" {{ $etiqueta->estado === 'stock' ? 'selected' : '' }}>Stock</option>
                             <option value="liberado" {{ $etiqueta->estado === 'liberado' ? 'selected' : '' }}>Liberado</option>
                         </select>
+                    </div>
+
+                    {{-- Imagen única + preview --}}
+                    @php
+                        $placeholder = asset('images/no-image.png');
+                        $preview = ($etiqueta->imagen_url ?? null)
+                            ?? (optional($etiqueta->producto)->imagen_url ?? $placeholder);
+                    @endphp
+                    <div class="mb-2">
+                        <label class="form-label">Imagen (opcional, 1)</label>
+                        <input type="file" name="imagen" id="imagen{{ $etiqueta->id }}" class="form-control" accept="image/*">
+                        <div class="mt-2 d-flex align-items-center gap-3">
+                            <img id="previewImg{{ $etiqueta->id }}" src="{{ $preview }}" alt="Preview" style="width:140px;height:140px;object-fit:cover;border:1px solid #eee;border-radius:8px;">
+                            <div>
+                                @if(!empty($etiqueta->imagen_url))
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="eliminar_imagen" value="1" id="elimImg{{ $etiqueta->id }}">
+                                        <label class="form-check-label" for="elimImg{{ $etiqueta->id }}">Eliminar imagen actual</label>
+                                    </div>
+                                @endif
+                                <small class="text-muted d-block mt-1">Formatos: JPG/PNG, máx. 4MB.</small>
+                            </div>
+                        </div>
                     </div>
 
                     <hr class="my-3">
@@ -74,42 +111,73 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const ordenId = {{ $etiqueta->orden_id ?? 'null' }};
-        const select = document.getElementById('productoSelect{{ $etiqueta->id }}');
-        const selectedItemId = {{ $etiqueta->item_orden_id ?? 'null' }};
-        const selectedProductoId = {{ $etiqueta->producto_id ?? 'null' }};
+document.addEventListener('DOMContentLoaded', function () {
+    const ordenId = {{ $etiqueta->orden_id ?? 'null' }};
+    const select = document.getElementById('productoSelect{{ $etiqueta->id }}');
+    const selectedItemId = {{ $etiqueta->item_orden_id ?? 'null' }};
+    const selectedProductoId = {{ $etiqueta->producto_id ?? 'null' }};
+    const fileInput = document.getElementById('imagen{{ $etiqueta->id }}');
+    const previewImg = document.getElementById('previewImg{{ $etiqueta->id }}');
+    const placeholder = @json(asset('images/no-image.png'));
 
-        if (ordenId) {
-            // Etiqueta asociada a orden: cargar productos de la orden
-            fetch(`/ordenes/${ordenId}/items-json`)
-                .then(res => res.json())
-                .then(items => {
-                    let options = '<option value="">Seleccione un producto</option>';
-                    items.forEach(item => {
-                        const selected = item.id === selectedItemId ? 'selected' : '';
-                        options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
-                    });
-                    select.innerHTML = options;
-                })
-                .catch(() => {
-                    select.innerHTML = '<option value="">Error al cargar productos</option>';
+    // Cargar opciones del select según si hay orden o no
+    if (ordenId) {
+        fetch(`/ordenes/${ordenId}/items-json`)
+            .then(res => res.json())
+            .then(items => {
+                let options = '<option value="">Seleccione un producto</option>';
+                items.forEach(item => {
+                    const selected = item.id === selectedItemId ? 'selected' : '';
+                    const dataImg = item.imagen_url ? `data-img="${item.imagen_url}"` : '';
+                    options += `<option value="${item.id}" ${selected} ${dataImg}>${item.nombre}</option>`;
                 });
-        } else {
-            // Etiqueta libre: cargar productos sueltos
-            fetch(`/productos/todos-json`)
-                .then(res => res.json())
-                .then(productos => {
-                    let options = '<option value="">Seleccione un producto</option>';
-                    productos.forEach(p => {
-                        const selected = p.id === selectedProductoId ? 'selected' : '';
-                        options += `<option value="${p.id}" ${selected}>${p.nombre}</option>`;
-                    });
-                    select.innerHTML = options;
-                })
-                .catch(() => {
-                    select.innerHTML = '<option value="">Error al cargar productos</option>';
+                select.innerHTML = options;
+            })
+            .catch(() => {
+                select.innerHTML = '<option value="">Error al cargar productos</option>';
+            });
+    } else {
+        fetch(`/productos/todos-json`)
+            .then(res => res.json())
+            .then(productos => {
+                let options = '<option value="">Seleccione un producto</option>';
+                productos.forEach(p => {
+                    const selected = p.id === selectedProductoId ? 'selected' : '';
+                    const dataImg = p.imagen_url ? `data-img="${p.imagen_url}"` : '';
+                    options += `<option value="${p.id}" ${selected} ${dataImg}>${p.nombre}</option>`;
                 });
-        }
+                select.innerHTML = options;
+
+                const opt = select.options[select.selectedIndex];
+                if (opt && !{{ $etiqueta->imagen_url ? 'true' : 'false' }}) {
+                    const url = opt.getAttribute('data-img');
+                    if (url) previewImg.src = url;
+                }
+            })
+            .catch(() => {
+                select.innerHTML = '<option value="">Error al cargar productos</option>';
+            });
+    }
+
+    // Preview según producto (si NO hay archivo)
+    select?.addEventListener('change', () => {
+        if (fileInput?.files?.length) return;
+        const opt = select.options[select.selectedIndex];
+        const url = opt?.getAttribute('data-img');
+        previewImg && (previewImg.src = url || placeholder);
     });
+
+    // Preview según archivo (tiene prioridad)
+    fileInput?.addEventListener('change', () => {
+        if (!fileInput.files.length) {
+            const opt = select?.options?.[select.selectedIndex];
+            const url = opt?.getAttribute('data-img');
+            previewImg && (previewImg.src = url || placeholder);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => { previewImg && (previewImg.src = e.target.result); };
+        reader.readAsDataURL(fileInput.files[0]);
+    });
+});
 </script>

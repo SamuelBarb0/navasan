@@ -40,7 +40,7 @@ class FacturacionController extends Controller
             ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
                 $q->where('etapa_produccion_id', $etapaId)
                     ->where('usuario_id', $usuario->id)
-                    ->where('estado', 'pendiente')
+                    ->whereIn('estado', ['pendiente', 'en_proceso']) // ✅ aquí incluimos ambos
                     ->whereNotExists(function ($subquery) use ($ordenEtapa) {
                         $subquery->select(DB::raw(1))
                             ->from('orden_etapas as anteriores')

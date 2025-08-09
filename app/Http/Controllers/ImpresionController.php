@@ -41,7 +41,7 @@ class ImpresionController extends Controller
             ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
                 $q->where('etapa_produccion_id', $etapaId)
                     ->where('usuario_id', $usuario->id)
-                    ->where('estado', 'pendiente')
+                    ->whereIn('estado', ['pendiente', 'en_proceso'])
                     ->whereNotExists(function ($subquery) use ($ordenEtapa) {
                         $subquery->select(DB::raw(1))
                             ->from('orden_etapas as anteriores')
@@ -55,6 +55,7 @@ class ImpresionController extends Controller
             ->take(20)
             ->get();
 
+            
         $impresiones = Impresion::with('orden')->latest()->get();
 
         return view('impresiones.index', compact('impresiones', 'ordenes'));

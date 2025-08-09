@@ -46,7 +46,7 @@ public function store(Request $request)
     $nueva->numero_orden = 'ORD-2025-' . str_pad($ultimoId, 3, '0', STR_PAD_LEFT);
     $nueva->estado = 'pendiente';
     $nueva->urgente = true;
-    $nueva->comentarios = 'REIMPRESIÓN URGENTE POR DEVOLUCIÓN. Motivo: ' . $validated['motivo_cliente'];
+    $nueva->comentarios = $validated['motivo_cliente'];
     $nueva->save();
 
     // Clonar relaciones

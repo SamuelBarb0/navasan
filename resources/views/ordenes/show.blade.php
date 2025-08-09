@@ -100,93 +100,90 @@ $esAdmin = $usuario->hasRole('administrador');
             @endif
 
 
-            {{-- Progreso por Etapas --}}
-            <div class="mt-5">
-                <h5 class="text-primary"><i class="bi bi-gear-wide-connected me-1"></i> Progreso por Etapas</h5>
+{{-- 👇 Ordenar por el campo "orden" de etapa_produccions --}}
+@php
+$etapasOrdenadas = $orden->etapas->sortBy(function($etapa) {
+    return $etapa->etapa?->orden ?? 999; // 999 por si alguna no tiene orden
+});
 
-                @if($orden->etapas->isEmpty())
-                <div class="alert alert-warning mt-3">No hay etapas registradas para esta orden.</div>
-                @else
-                {{-- 👇 BLOQUE MODIFICADO --}}
+$acabadosIniciado = $etapasOrdenadas->contains(function($e) {
+    return $e->etapa?->nombre === 'Acabados' && in_array($e->estado, ['en_proceso', 'completado']);
+});
+@endphp
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped mt-3 align-middle shadow-sm">
+        <thead style="background-color: #f1f1f1;" class="text-dark">
+            <tr>
+                <th>Etapa</th>
+                <th>Responsable</th>
+                <th>Estado</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Observaciones</th>
+                <th>Gestión</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($etapasOrdenadas as $etapa)
                 @php
-                $acabadosIniciado = $orden->etapas->contains(function($e) {
-                return $e->etapa?->nombre === 'Acabados' && in_array($e->estado, ['en_proceso', 'completado']);
-                });
+                    $nombreEtapa = $etapa->etapa?->nombre;
+                    $ocultar = in_array($nombreEtapa, ['Laminado Mate / Brillante', 'Empalmado']) && !$acabadosIniciado;
+                    $color = match($etapa->estado) {
+                        'pendiente' => 'secondary',
+                        'en_proceso' => 'info',
+                        'completado' => 'success',
+                        'rechazado' => 'danger',
+                        default => 'dark'
+                    };
+                    $puedeGestionar = $esAdmin || $etapa->usuario_id === $usuario->id;
                 @endphp
 
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped mt-3 align-middle shadow-sm">
-                        <thead style="background-color: #f1f1f1;" class="text-dark">
-                            <tr>
-                                <th>Etapa</th>
-                                <th>Responsable</th>
-                                <th>Estado</th>
-                                <th>Inicio</th>
-                                <th>Fin</th>
-                                <th>Observaciones</th>
-                                <th>Gestión</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($orden->etapas as $etapa)
-                            @php
-                            $nombreEtapa = $etapa->etapa?->nombre;
-                            $ocultar = in_array($nombreEtapa, ['Laminado Mate / Brillante', 'Empalmado']) && !$acabadosIniciado;
-                            $color = match($etapa->estado) {
-                            'pendiente' => 'secondary',
-                            'en_proceso' => 'info',
-                            'completado' => 'success',
-                            'rechazado' => 'danger',
-                            default => 'dark'
-                            };
-                            $puedeGestionar = $esAdmin || $etapa->usuario_id === $usuario->id;
-                            @endphp
-
-                            @if(!$ocultar)
-                            <tr>
-                                <td>{{ $nombreEtapa ?? '—' }}</td>
-                                <td>{{ $etapa->usuario?->name ?? '—' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $color }} px-3 py-2 rounded-pill">
-                                        {{ ucfirst($etapa->estado) }}
-                                    </span>
-                                </td>
-                                <td>{{ $etapa->inicio ? \Carbon\Carbon::parse($etapa->inicio)->format('d/m/Y H:i') : '—' }}</td>
-                                <td>{{ $etapa->fin ? \Carbon\Carbon::parse($etapa->fin)->format('d/m/Y H:i') : '—' }}</td>
-                                <td>{{ $etapa->observaciones ?? '—' }}</td>
-                                <td>
-                                    @if($puedeGestionar)
-                                    @if($etapa->estado === 'pendiente')
-                                    <form action="{{ route('orden_etapas.iniciar', $etapa->id) }}" method="POST">
-                                        @csrf @method('PATCH')
-                                        <button type="submit" class="btn btn-sm btn-outline-info">
-                                            <i class="bi bi-play-circle"></i> Iniciar
+                @if(!$ocultar)
+                <tr>
+                    <td>{{ $nombreEtapa ?? '—' }}</td>
+                    <td>{{ $etapa->usuario?->name ?? '—' }}</td>
+                    <td>
+                        <span class="badge bg-{{ $color }} px-3 py-2 rounded-pill">
+                            {{ ucfirst($etapa->estado) }}
+                        </span>
+                    </td>
+                    <td>{{ $etapa->inicio ? \Carbon\Carbon::parse($etapa->inicio)->format('d/m/Y H:i') : '—' }}</td>
+                    <td>{{ $etapa->fin ? \Carbon\Carbon::parse($etapa->fin)->format('d/m/Y H:i') : '—' }}</td>
+                    <td>{{ $etapa->observaciones ?? '—' }}</td>
+                    <td>
+                        @if($puedeGestionar)
+                            @if($etapa->estado === 'pendiente')
+                                <form action="{{ route('orden_etapas.iniciar', $etapa->id) }}" method="POST">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-play-circle"></i> Iniciar
+                                    </button>
+                                </form>
+                            @elseif($etapa->estado === 'en_proceso')
+                                <form action="{{ route('orden_etapas.finalizar', $etapa->id) }}" method="POST">
+                                    @csrf @method('PATCH')
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="observaciones" class="form-control" placeholder="Observaciones" required style="border-color: #7CB9E6;">
+                                        <button class="btn btn-success" type="submit">
+                                            <i class="bi bi-check-circle"></i> Finalizar
                                         </button>
-                                    </form>
-                                    @elseif($etapa->estado === 'en_proceso')
-                                    <form action="{{ route('orden_etapas.finalizar', $etapa->id) }}" method="POST">
-                                        @csrf @method('PATCH')
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" name="observaciones" class="form-control" placeholder="Observaciones" required style="border-color: #7CB9E6;">
-                                            <button class="btn btn-success" type="submit">
-                                                <i class="bi bi-check-circle"></i> Finalizar
-                                            </button>
-                                        </div>
-                                    </form>
-                                    @else
-                                    <span class="text-muted">—</span>
-                                    @endif
-                                    @else
-                                    <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                            </tr>
+                                    </div>
+                                </form>
+                            @else
+                                <span class="text-muted">—</span>
                             @endif
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @else
+                            <span class="text-muted">—</span>
+                        @endif
+                    </td>
+                </tr>
                 @endif
+            @endforeach
+        </tbody>
+    </table>
+</div>
+
             </div>
 
             @if($orden->insumos->isNotEmpty())

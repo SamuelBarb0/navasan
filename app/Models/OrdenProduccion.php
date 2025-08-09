@@ -57,6 +57,13 @@ class OrdenProduccion extends Model
         return $this->hasMany(Producto::class, 'orden_id');
     }
 
+    public function devolucion()
+    {
+        return $this->hasOne(\App\Models\Devolucion::class, 'orden_id', 'id');
+    }
+
+
+
     public static function ordenesListasParaEtapa($nombreEtapa)
     {
         $etapaTarget = \App\Models\EtapaProduccion::where('nombre', $nombreEtapa)->first();

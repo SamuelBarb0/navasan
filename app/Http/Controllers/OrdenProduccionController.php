@@ -34,7 +34,7 @@ class OrdenProduccionController extends Controller
             $query->whereHas('etapas', function ($q) use ($etapaIds, $ordenesEtapas, $usuario) {
                 $q->whereIn('etapa_produccion_id', $etapaIds)
                     ->where('usuario_id', $usuario->id) // 👈 Asegura que sea del usuario
-                    ->where('estado', 'pendiente')
+                    ->whereIn('estado', ['pendiente', 'en_proceso'])
                     ->whereNotExists(function ($subquery) use ($ordenesEtapas) {
                         $minOrden = min($ordenesEtapas);
                         $subquery->select(DB::raw(1))
@@ -66,7 +66,7 @@ class OrdenProduccionController extends Controller
             ->get();
 
         // Devoluciones urgentes
-        $devoluciones = \App\Models\OrdenProduccion::with('cliente')
+        $devoluciones = \App\Models\OrdenProduccion::with(['cliente', 'devolucion']) // 👈 aquí
             ->where('urgente', true)
             ->when($busqueda, function ($query) use ($busqueda) {
                 $query->where(function ($sub) use ($busqueda) {

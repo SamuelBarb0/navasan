@@ -3,47 +3,225 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Acabado;
+use Illuminate\Support\Facades\Cache;
+use App\Models\Laminado;
+use App\Models\Suajes;
+use App\Models\Empalmado;
+use App\Models\OrdenProduccion;
+use App\Models\ItemOrden;
+use App\Models\Producto;
 
 class AcabadoController extends Controller
 {
-    public function index()
+    private const MAP = [
+        'suaje-corte' => [
+            'title'    => 'Procesos de Suaje y Corte',
+            'model'    => Suajes::class,
+            'procesos' => ['suaje', 'corte_guillotina'],
+        ],
+        'laminado' => [
+            'title'    => 'Procesos de Laminado',
+            'model'    => Laminado::class,
+            'procesos' => ['laminado_mate', 'laminado_brillante'],
+        ],
+        'empalmado' => [
+            'title'    => 'Procesos de Empalmado',
+            'model'    => Empalmado::class,
+            'procesos' => ['empalmado'],
+        ],
+    ];
+
+    private function cfg(Request $request, ?string $tipo = null): array
     {
-        $acabados = Acabado::with('orden')->latest()->get();
-        return view('acabados.index', compact('acabados'));
+        if ($tipo && isset(self::MAP[$tipo])) return self::MAP[$tipo];
+
+        $name = $request->route()?->getName() ?? '';
+        foreach (self::MAP as $key => $row) {
+            if (str_contains($name, $key)) return $row;
+        }
+
+        $uri = $request->path();
+        foreach (self::MAP as $key => $row) {
+            if (str_contains($uri, $key)) return $row;
+        }
+
+        return self::MAP['laminado'];
     }
 
-    public function store(Request $request)
+    public function index(Request $request, ?string $tipo = null)
     {
-        $request->validate([
-            'orden_id' => 'required|exists:orden_produccions,id',
-            'proceso' => 'required|in:laminado_mate,laminado_brillante,empalmado,suaje,corte_guillotina',
-            'realizado_por' => 'required|string|max:100',
-            'fecha_fin' => 'nullable|date',
-        ]);
+        $cfg   = $this->cfg($request, $tipo);
+        $model = $cfg['model'];
 
-        Acabado::create([
-            'orden_id' => $request->orden_id,
-            'proceso' => $request->proceso,
-            'realizado_por' => $request->realizado_por,
-            'fecha_fin' => $request->fecha_fin, // puede ser null
-        ]);
+        // Evitar with('producto') cuando es suaje
+        $with = ['orden.cliente'];
+        $isSuaje = array_search($cfg, self::MAP, true) === 'suaje-corte';
+        if (!$isSuaje) {
+            $with[] = 'producto';
+        }
 
-        return redirect()->back()->with('success', 'Proceso de acabado registrado.');
+        $acabados = $model::with($with)->latest()->paginate(20);
+
+        $ordenes   = OrdenProduccion::latest()->take(20)->get();
+        $productos = Producto::orderBy('nombre')->take(100)->get();
+
+        return view('acabados.index', [
+            'acabados'  => $acabados,
+            'titulo'    => $cfg['title'],
+            'procesos'  => $cfg['procesos'],
+            'ordenes'   => $ordenes,
+            'productos' => $productos,
+            'tipo'      => array_search($cfg, self::MAP, true), // 'suaje-corte' | 'laminado' | 'empalmado'
+        ]);
     }
 
-    public function update(Request $request, $id)
+    public function store(Request $request, ?string $tipo = null)
     {
-        $request->validate([
-            'orden_id' => 'required|exists:orden_produccions,id',
-            'proceso' => 'required|in:laminado_mate,laminado_brillante,empalmado,suaje,corte_guillotina',
-            'realizado_por' => 'required|string|max:100',
-            'fecha_fin' => 'nullable|date',
+        $cfg   = $this->cfg($request, $tipo);
+        $model = $cfg['model'];
+        $key   = array_search($cfg, self::MAP, true);
+
+        if ($key === 'suaje-corte') {
+            $validated = $request->validate([
+                'orden_id'                  => 'required|exists:orden_produccions,id',
+                'cantidad_liberada'         => 'required|integer|min:0',
+                'cantidad_pliegos_impresos' => 'nullable|integer|min:0',
+            ]);
+
+            $registro = $model::create([
+                'orden_id'                  => $validated['orden_id'],
+                'cantidad_liberada'         => $validated['cantidad_liberada'],
+                'cantidad_pliegos_impresos' => $validated['cantidad_pliegos_impresos'] ?? 0,
+            ]);
+
+            // 🔔 Alerta global automática si liberada < impresa
+            $this->dispararDesfaseSuajeSiAplica(
+                $validated['orden_id'],
+                (int) ($validated['cantidad_liberada'] ?? 0),
+                (int) ($validated['cantidad_pliegos_impresos'] ?? 0)
+            );
+
+            return back()->with('success', 'Suaje/Corte registrado.');
+        }
+
+        $validated = $request->validate([
+            'orden_id'                  => 'required|exists:orden_produccions,id',
+            'producto_id'               => 'required|exists:productos,id',
+            'proceso'                   => 'required|in:' . implode(',', $cfg['procesos']),
+            'realizado_por'             => 'required|string|max:100',
+            'cantidad_pliegos_impresos' => 'nullable|integer|min:0',
+            'fecha_fin'                 => 'nullable|date',
         ]);
 
-        $acabado = Acabado::findOrFail($id);
-        $acabado->update($request->only('orden_id', 'proceso', 'realizado_por', 'fecha_fin'));
+        $model::create([
+            'orden_id'                  => $validated['orden_id'],
+            'producto_id'               => $validated['producto_id'],
+            'proceso'                   => $validated['proceso'],
+            'realizado_por'             => $validated['realizado_por'],
+            'cantidad_pliegos_impresos' => $validated['cantidad_pliegos_impresos'] ?? 0,
+            'fecha_fin'                 => $validated['fecha_fin'] ?? null,
+        ]);
 
-        return redirect()->back()->with('success', 'Proceso de acabado actualizado.');
+        return back()->with('success', 'Proceso registrado en ' . $cfg['title'] . '.');
+    }
+
+    public function destroy(Request $request, $id, ?string $tipo = null)
+    {
+        $cfg   = $this->cfg($request, $tipo);
+        $model = $cfg['model'];
+
+        $registro = $model::findOrFail($id);
+        $registro->delete();
+
+        return back()->with('success', 'Registro eliminado correctamente de ' . $cfg['title'] . '.');
+    }
+
+    public function update(Request $request, $id, ?string $tipo = null)
+    {
+        $cfg   = $this->cfg($request, $tipo);
+        $model = $cfg['model'];
+        $key   = array_search($cfg, self::MAP, true);
+
+        if ($key === 'suaje-corte') {
+            $validated = $request->validate([
+                'orden_id'                  => 'required|exists:orden_produccions,id',
+                'cantidad_liberada'         => 'required|integer|min:0',
+                'cantidad_pliegos_impresos' => 'nullable|integer|min:0',
+            ]);
+
+            $registro = $model::findOrFail($id);
+            $registro->update([
+                'orden_id'                  => $validated['orden_id'],
+                'cantidad_liberada'         => $validated['cantidad_liberada'],
+                'cantidad_pliegos_impresos' => $validated['cantidad_pliegos_impresos'] ?? 0,
+            ]);
+
+            // 🔔 Alerta global automática si liberada < impresa
+            $this->dispararDesfaseSuajeSiAplica(
+                $validated['orden_id'],
+                (int) ($validated['cantidad_liberada'] ?? 0),
+                (int) ($validated['cantidad_pliegos_impresos'] ?? 0)
+            );
+
+            return back()->with('success', 'Suaje/Corte actualizado.');
+        }
+
+        $validated = $request->validate([
+            'orden_id'                  => 'required|exists:orden_produccions,id',
+            'producto_id'               => 'required|exists:productos,id',
+            'proceso'                   => 'required|in:' . implode(',', $cfg['procesos']),
+            'realizado_por'             => 'required|string|max:100',
+            'cantidad_pliegos_impresos' => 'nullable|integer|min:0',
+            'fecha_fin'                 => 'nullable|date',
+        ]);
+
+        $registro = $model::findOrFail($id);
+        $registro->update([
+            'orden_id'                  => $validated['orden_id'],
+            'producto_id'               => $validated['producto_id'],
+            'proceso'                   => $validated['proceso'],
+            'realizado_por'             => $validated['realizado_por'],
+            'cantidad_pliegos_impresos' => $validated['cantidad_pliegos_impresos'] ?? 0,
+            'fecha_fin'                 => $validated['fecha_fin'] ?? null,
+        ]);
+
+        return back()->with('success', 'Proceso actualizado en ' . $cfg['title'] . '.');
+    }
+
+    public function productosPorOrden($ordenId)
+    {
+        $items = ItemOrden::where('orden_produccion_id', $ordenId)
+            ->with(['producto:id,nombre'])
+            ->select(['id', 'orden_produccion_id', 'producto_id'])
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $payload = $items->map(function ($it) {
+            return [
+                'item_id'         => $it->id,
+                'producto_id'     => $it->producto_id,
+                'producto_nombre' => $it->producto?->nombre,
+            ];
+        });
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Dispara la alerta global de desfase (liberada < impresa) para Suaje/Corte.
+     * Muestra el número de orden si está disponible.
+     */
+    private function dispararDesfaseSuajeSiAplica(int $ordenId, int $liberada, int $pliegos): void
+    {
+        // Solo disparar si hay pliegos y existe desfase
+        if ($pliegos > 0 && $liberada < $pliegos) {
+            $orden = OrdenProduccion::find($ordenId);
+            $ordenTxt = $orden->numero_orden ?? $ordenId;
+
+            $msg = "⚠ <b>Desfase en Suaje</b> – Orden {$ordenTxt}: liberada {$liberada} < pliegos {$pliegos}. Revisar antes de despachar.";
+
+            // 🔒 Usa la MISMA clave que tu componente Blade lee
+            Cache::forever('toast_suaje_desfase_global', $msg);
+        }
     }
 }

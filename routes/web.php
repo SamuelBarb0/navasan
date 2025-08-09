@@ -21,6 +21,7 @@ use App\Http\Controllers\{
     EtapaProduccionController
 };
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\Request;
 
 // Página de bienvenida
 Route::get('/', function () {
@@ -149,7 +150,6 @@ Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
     Route::resource('inventario-etiquetas', InventarioEtiquetaController::class);
     Route::put('/inventario-etiquetas/{id}', [InventarioEtiquetaController::class, 'update'])->name('inventario-etiquetas.update');
     Route::delete('/inventario-etiquetas/{inventarioEtiqueta}', [InventarioEtiquetaController::class, 'destroy'])->name('inventario-etiquetas.destroy');
-
 });
 
 // =========================
@@ -167,6 +167,51 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
 });
 Route::resource('etapas', EtapaProduccionController::class);
 
+Route::prefix('suaje-corte')->name('suaje-corte.')->group(function () {
+    Route::get('/',        [AcabadoController::class, 'index'])->name('index');
+    Route::post('/',       [AcabadoController::class, 'store'])->name('store');
+    Route::put('/{id}',    [AcabadoController::class, 'update'])->name('update');
+    Route::delete('/{id}', [AcabadoController::class, 'destroy'])->name('destroy'); // 👈 nuevo
+});
+
+Route::prefix('laminado')->name('laminado.')->group(function () {
+    Route::get('/',        [AcabadoController::class, 'index'])->name('index');
+    Route::post('/',       [AcabadoController::class, 'store'])->name('store');
+    Route::put('/{id}',    [AcabadoController::class, 'update'])->name('update');
+    Route::delete('/{id}', [AcabadoController::class, 'destroy'])->name('destroy'); // 👈 nuevo
+});
+
+Route::prefix('empalmado')->name('empalmado.')->group(function () {
+    Route::get('/',        [AcabadoController::class, 'index'])->name('index');
+    Route::post('/',       [AcabadoController::class, 'store'])->name('store');
+    Route::put('/{id}',    [AcabadoController::class, 'update'])->name('update');
+    Route::delete('/{id}', [AcabadoController::class, 'destroy'])->name('destroy'); // 👈 nuevo
+});
+
+
+
+// Setear aviso global (lo ve todo el mundo)
+Route::post('/toasts/suaje/global/set', function (Request $r) {
+    $msg = $r->input('message', '⚠ Aviso global de suaje');
+    Cache::forever('toast_suaje_global', $msg);
+    return back();
+})->name('toasts.suaje.global.set');
+
+// Quitar aviso global
+Route::post('/toasts/suaje/global/clear', function () {
+    Cache::forget('toast_suaje_global');
+    return back();
+})->name('toasts.suaje.global.clear');
+
+
+Route::post('/toasts/suaje/desfase/clear', function () {
+    Cache::forget('toast_suaje_desfase_global');
+    return back();
+})->name('toasts.suaje.desfase.clear');
+
+Route::get('/ordenes/{orden}/items-json', [AcabadoController::class, 'productosPorOrden'])
+    ->whereNumber('orden')
+    ->name('ordenes.items_json');
 
 Route::resource('categorias', CategoriaController::class);
 Route::get('/revisiones/limpiar-toast', function () {

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Devolucion extends Model
 {
     protected $table = 'devoluciones';
-    
+
     protected $fillable = [
         'orden_id',
         'motivo_cliente',
@@ -19,7 +19,6 @@ class Devolucion extends Model
 
     public function orden()
     {
-        return $this->belongsTo(OrdenProduccion::class);
+        return $this->belongsTo(\App\Models\OrdenProduccion::class, 'orden_id', 'id');
     }
 }
-
