@@ -38,20 +38,20 @@ class Producto extends Model
     // Accessor: URL pública de la imagen
     public function getImagenUrlAttribute(): ?string
     {
-        if (!$this->imagen) return null;
+        if (!$this->imagen_path) return null;
 
-        // Si guardas en storage/app/public => usar Storage::url
-        // Si a veces guardas en /public/images, intenta detectar
-        if (preg_match('#^https?://#i', $this->imagen)) {
-            return $this->imagen; // ya es URL completa
+        // Si ya es URL completa
+        if (preg_match('#^https?://#i', $this->imagen_path)) {
+            return $this->imagen_path;
         }
 
-        // Si el path parece de storage público
-        return Storage::url($this->imagen);
-        // Si usas public_path('images/...'), podrías usar:
-        // return asset($this->imagen);
-    }
+        // Si el archivo está en /public/images/... (caso de saveUploadedImage)
+        return asset($this->imagen_path);
 
+        // Si en algún caso usas storage/app/public, sería:
+        // return Storage::url($this->imagen_path);
+    }
+    
     // Scope útil para listar solo activos
     public function scopeActivos($query)
     {
