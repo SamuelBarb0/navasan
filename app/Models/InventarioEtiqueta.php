@@ -31,16 +31,18 @@ class InventarioEtiqueta extends Model
 
     public function getImagenUrlAttribute(): ?string
     {
-        $path = $this->imagen_path;           // 👈 tu columna real
+        $path = $this->imagen_path; // tu columna real
         if (!$path) return null;
 
-        // Si ya viene una URL completa, usarla tal cual
-        if (preg_match('#^https?://#i', $path)) return $path;
+        // Si ya es una URL completa, se devuelve igual
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
 
-        // Normaliza por si alguien guardó con o sin slash inicial
-        $path = ltrim($path, '/');            // ej: images/productos/archivo.jpg
+        // Normaliza por si tiene / al inicio
+        $path = ltrim($path, '/');
 
-        // Tus imágenes están en public_html/images/... => usa asset()
-        return asset($path);                   // https://navasan.site/images/productos/archivo.jpg
+        // Genera URL directa desde public/
+        return asset($path); // https://navasan.site/images/productos/archivo.png
     }
 }

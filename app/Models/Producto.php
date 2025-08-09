@@ -35,21 +35,23 @@ class Producto extends Model
         return $this->hasMany(InventarioEtiqueta::class, 'producto_id');
     }
 
+    // Accessor: URL pública de la imagen
     public function getImagenUrlAttribute(): ?string
     {
-        // Si tienes una columna imagen_url “manual”, respétala
-        if (!empty($this->attributes['imagen_url']) && preg_match('#^https?://#i', $this->attributes['imagen_url'])) {
-            return $this->attributes['imagen_url'];
+        if (!$this->imagen_path) return null;
+
+        // Si ya es URL completa
+        if (preg_match('#^https?://#i', $this->imagen_path)) {
+            return $this->imagen_path;
         }
 
-        $path = $this->imagen_path ?? $this->attributes['imagen_url'] ?? null;
-        if (!$path) return null;
+        // Si el archivo está en /public/images/... (caso de saveUploadedImage)
+        return asset($this->imagen_path);
 
-        if (preg_match('#^https?://#i', $path)) return $path;
-        return asset(ltrim($path, '/'));
+        // Si en algún caso usas storage/app/public, sería:
+        // return Storage::url($this->imagen_path);
     }
-
-
+    
     // Scope útil para listar solo activos
     public function scopeActivos($query)
     {
