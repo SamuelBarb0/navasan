@@ -54,8 +54,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ordenes', [OrdenProduccionController::class, 'index'])->name('ordenes.index');
     Route::get('/ordenes/{orden}', [OrdenProduccionController::class, 'show'])->name('ordenes.show');
     Route::get('/ordenes/{orden}/productos-json', [OrdenProduccionController::class, 'productosDeOrden']);
-    Route::get('/ordenes/{orden}/items-json', [OrdenProduccionController::class, 'itemsJson']);
+
 });
+
+Route::get('/ordenes/{orden}/items-json', [OrdenProduccionController::class, 'itemsJson']);
 
 Route::middleware(['auth'])->group(function () {
     Route::patch('/orden-etapas/{etapa}/iniciar', [OrdenEtapaController::class, 'iniciar'])->name('orden_etapas.iniciar');
@@ -68,9 +70,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::post('/clientes/ajax-store', [ClienteController::class, 'ajaxStore'])->name('clientes.ajaxStore');
-    Route::get('/productos/todos-json', function () {
-        return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
-    });
+
 
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
@@ -79,6 +79,10 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
     Route::get('/productos-por-cliente/{clienteId}', [ProductoController::class, 'porCliente']);
 });
+
+    Route::get('/productos/todos-json', function () {
+        return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
+    });
 
 Route::prefix('usuarios')->name('usuarios.')->group(function () {
     Route::get('/', [UserController::class, 'index'])->name('index');         // Mostrar todos los usuarios
