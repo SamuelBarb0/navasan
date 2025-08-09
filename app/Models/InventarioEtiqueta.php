@@ -28,4 +28,11 @@ class InventarioEtiqueta extends Model
     {
         return $this->belongsTo(\App\Models\Cliente::class, 'cliente_id');
     }
+
+    // Si no lo tienes aún, agrégalo al modelo
+    public function getImagenUrlAttribute()
+    {
+        // imagen_path = 'images/productos/archivo.png'
+        return $this->imagen_path ? url($this->imagen_path) : null;
+    }
 }
