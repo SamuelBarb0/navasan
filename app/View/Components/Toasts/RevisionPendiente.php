@@ -5,6 +5,7 @@ namespace App\View\Components\Toasts;
 use Illuminate\View\Component;
 use Illuminate\Support\Collection;
 use App\Models\Revision;
+use App\Models\OrdenProduccion;
 
 class RevisionPendiente extends Component
 {
@@ -12,24 +13,27 @@ class RevisionPendiente extends Component
 
     public function __construct()
     {
-        // Solo mostrar el toast si la sesión lo indica
         if (!session('mostrar_toast_revision')) {
             $this->ordenes = collect();
             return;
         }
 
-        // Trae hasta 5 NÚMEROS DE ORDEN ÚNICOS, más recientes, sin nulos/vacíos
+        // Nombres de tabla reales (evita hardcodear 'revisiones' / 'ordenes')
+        $rev = (new Revision())->getTable();          // 'revisiones'
+        $ord = (new OrdenProduccion())->getTable();   // ej. 'ordenes' o el que tenga tu modelo
+
         $this->ordenes = Revision::query()
-            ->select('ordenes.numero_orden')
-            ->join('ordenes', 'revisions.orden_id', '=', 'ordenes.id') // ajusta si tu tabla de órdenes se llama distinto
-            ->whereNotNull('ordenes.numero_orden')
-            ->orderBy('revisions.created_at', 'desc')
+            ->join($ord, "$rev.orden_id", '=', "$ord.id")
+            ->whereNotNull("$ord.numero_orden")
+            // Si quieres solo las “pendientes” (ej. problemáticas), descomenta:
+            // ->whereIn("$rev.tipo", ['apartada', 'defectos', 'rechazada'])
+            ->orderBy("$rev.created_at", 'desc')
             ->distinct()
             ->limit(5)
-            ->pluck('ordenes.numero_orden')
-            ->map(fn($v) => trim((string) $v))
-            ->filter()      // quita vacíos
-            ->values();     // reindexa
+            ->pluck("$ord.numero_orden")
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->values();
     }
 
     public function render()
