@@ -226,8 +226,9 @@ Route::get('/ordenes/{orden}/revisiones-json', [OrdenProduccionController::class
 
 
 Route::resource('categorias', CategoriaController::class);
-Route::get('/revisiones/limpiar-toast', function () {
-    Cache::forget('toast_revision_ordenes');
-    return response()->json(['status' => 'ok']);
-})->name('revisiones.limpiar.toast');
+Route::post('/revisiones/limpiar-toast', function () {
+    session()->forget('mostrar_toast_revision');
+    Cache::forget('toast_revision_ordenes'); // por si lo usaste antes
+    return response()->noContent();
+})->name('revisiones.limpiar.toast')->middleware('web');
 require __DIR__ . '/auth.php';
