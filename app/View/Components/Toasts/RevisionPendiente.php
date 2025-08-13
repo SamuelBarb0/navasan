@@ -14,48 +14,49 @@ class RevisionPendiente extends Component
 
     public function __construct()
     {
-        // Consumimos la bandera una vez
-        $flag = session()->pull('mostrar_toast_revision', false);
-        $this->shouldShow = (bool) $flag;
+        // NO consumimos la bandera mientras depuramos
+        $flag = (bool) session()->get('mostrar_toast_revision', false);
+
+        $rev = (new Revision())->getTable();          // 'revisiones'
+        $ord = (new OrdenProduccion())->getTable();   // tabla real del modelo OrdenProduccion
+
+        // Trae filas crudas para inspección
+        $rawRows = Revision::query()
+            ->join($ord, "$rev.orden_id", '=', "$ord.id")
+            ->whereNotNull("$ord.numero_orden")
+            ->orderBy("$rev.created_at", 'desc')
+            ->select([
+                "$rev.id as revision_id",
+                "$rev.tipo",
+                "$rev.cantidad",
+                "$rev.created_at as revision_fecha",
+                "$ord.id as orden_id",
+                "$ord.numero_orden",
+            ])
+            ->limit(20)
+            ->get();
+
+        // 🔴 DD directo: detiene la ejecución aquí
+        dd([
+            'flag_en_sesion'      => $flag,
+            'total_rows'          => $rawRows->count(),
+            'rows'                => $rawRows->toArray(),
+            'solo_numeros_orden'  => $rawRows->pluck('numero_orden')->all(),
+        ]);
+
+        // --- Lo de abajo no se ejecutará mientras exista el dd() ---
+
+        $this->shouldShow = $flag;
         $this->ordenes = collect();
 
         if (!$this->shouldShow) {
             return;
         }
 
-        $rev = (new Revision())->getTable();          // 'revisiones'
-        $ord = (new OrdenProduccion())->getTable();   // 'ordenes' (o el que tengas)
-
-        // Armamos una consulta "raw" para inspección
-        $query = Revision::query()
+        $this->ordenes = Revision::query()
             ->join($ord, "$rev.orden_id", '=', "$ord.id")
             ->whereNotNull("$ord.numero_orden")
-            ->orderBy("$rev.created_at", 'desc');
-
-        // ⚠️ DEBUG: si pasas ?dd_toast=1, hacemos dd() y paramos.
-        if (request()->boolean('dd_toast')) {
-            $rawRows = $query
-                ->select([
-                    "$rev.id as revision_id",
-                    "$rev.tipo",
-                    "$rev.cantidad",
-                    "$rev.created_at as revision_fecha",
-                    "$ord.id as orden_id",
-                    "$ord.numero_orden",
-                ])
-                ->limit(20)
-                ->get();
-
-            dd([
-                'flag_session_consumida' => $flag,
-                'total_rows'             => $rawRows->count(),
-                'rows'                   => $rawRows->toArray(),
-                'solo_numeros_orden'     => $rawRows->pluck('numero_orden')->all(),
-            ]);
-        }
-
-        // Flujo normal (sin dd):
-        $this->ordenes = $query
+            ->orderBy("$rev.created_at", 'desc')
             ->distinct()
             ->limit(5)
             ->pluck("$ord.numero_orden")
