@@ -25,18 +25,6 @@
             </div>
             @endif
 
-            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
-                <div id="toastAlertaRevision" class="toast align-items-center text-bg-warning border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body fw-bold">
-                            ⚠️ Por favor revisar revisión de <span id="ordenAlerta"></span>.
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-                    </div>
-                </div>
-            </div>
-
-
             @if($revisiones->isEmpty())
             <div class="alert alert-info">No hay revisiones registradas aún.</div>
             @else
