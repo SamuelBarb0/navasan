@@ -2,9 +2,9 @@
 
 namespace App\View\Components\Toasts;
 
-use App\Models\Revision;
 use Illuminate\View\Component;
 use Illuminate\Support\Collection;
+use App\Models\Revision;
 
 class RevisionPendiente extends Component
 {
@@ -13,17 +13,23 @@ class RevisionPendiente extends Component
     public function __construct()
     {
         // Solo mostrar el toast si la sesión lo indica
-        if (session('mostrar_toast_revision')) {
-            $this->ordenes = Revision::with('orden')
-                ->latest()
-                ->take(5)
-                ->get()
-                ->pluck('orden.numero_orden')
-                ->filter()
-                ->unique();
-        } else {
+        if (!session('mostrar_toast_revision')) {
             $this->ordenes = collect();
+            return;
         }
+
+        // Trae hasta 5 NÚMEROS DE ORDEN ÚNICOS, más recientes, sin nulos/vacíos
+        $this->ordenes = Revision::query()
+            ->select('ordenes.numero_orden')
+            ->join('ordenes', 'revisions.orden_id', '=', 'ordenes.id') // ajusta si tu tabla de órdenes se llama distinto
+            ->whereNotNull('ordenes.numero_orden')
+            ->orderBy('revisions.created_at', 'desc')
+            ->distinct()
+            ->limit(5)
+            ->pluck('ordenes.numero_orden')
+            ->map(fn($v) => trim((string) $v))
+            ->filter()      // quita vacíos
+            ->values();     // reindexa
     }
 
     public function render()
