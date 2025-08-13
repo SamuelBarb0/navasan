@@ -21,7 +21,7 @@
                     {{-- Cliente (opcional) --}}
                     <div class="mb-3">
                         <label class="form-label">Cliente (opcional)</label>
-                        <select name="cliente_id" class="form-select rounded-3">
+                        <select name="cliente_id" id="clienteSelectEdit{{ $etiqueta->id }}" class="form-select rounded-3">
                             <option value="">Sin cliente</option>
                             @foreach(($clientes ?? []) as $c)
                                 <option value="{{ $c->id }}" @selected($etiqueta->cliente_id == $c->id)>{{ $c->nombre }}</option>
@@ -61,7 +61,7 @@
                         <textarea name="observaciones" class="form-control rounded-3" rows="2">{{ $etiqueta->observaciones }}</textarea>
                     </div>
 
-                    {{-- Estado (nuevo) --}}
+                    {{-- Estado --}}
                     <div class="mb-3">
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-select rounded-3" required>
@@ -112,57 +112,94 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const ordenId = {{ $etiqueta->orden_id ?? 'null' }};
-    const select = document.getElementById('productoSelect{{ $etiqueta->id }}');
-    const selectedItemId = {{ $etiqueta->item_orden_id ?? 'null' }};
+    const ordenId            = {{ $etiqueta->orden_id ?? 'null' }};
+    const selectProd         = document.getElementById('productoSelect{{ $etiqueta->id }}');
+    const selectedItemId     = {{ $etiqueta->item_orden_id ?? 'null' }};
     const selectedProductoId = {{ $etiqueta->producto_id ?? 'null' }};
-    const fileInput = document.getElementById('imagen{{ $etiqueta->id }}');
-    const previewImg = document.getElementById('previewImg{{ $etiqueta->id }}');
-    const placeholder = @json(asset('images/no-image.png'));
+    const fileInput          = document.getElementById('imagen{{ $etiqueta->id }}');
+    const previewImg         = document.getElementById('previewImg{{ $etiqueta->id }}');
+    const placeholder        = @json(asset('images/no-image.png'));
 
-    // Cargar opciones del select según si hay orden o no
-    if (ordenId) {
-        fetch(`/ordenes/${ordenId}/items-json`)
-            .then(res => res.json())
+    const clienteSelect      = document.getElementById('clienteSelectEdit{{ $etiqueta->id }}');
+    const clienteIdInicial   = {{ $etiqueta->cliente_id ?? 'null' }};
+
+    // Helper: construir opciones y seleccionar valor
+    function renderOptions(items, selectedId) {
+        let options = '<option value="">Seleccione un producto</option>';
+        items.forEach(it => {
+            const sel   = (String(it.id) === String(selectedId)) ? 'selected' : '';
+            const dImg  = it.imagen_url ? `data-img="${it.imagen_url}"` : '';
+            const nombre= it.nombre ?? it.text ?? `#${it.id}`;
+            options += `<option value="${it.id}" ${sel} ${dImg}>${nombre}</option>`;
+        });
+        selectProd.innerHTML = options;
+    }
+
+    // Cargar por ORDEN
+    function cargarPorOrden(idOrden) {
+        selectProd.innerHTML = '<option value="">Cargando productos...</option>';
+        fetch(`/ordenes/${idOrden}/items-json`)
+            .then(r => r.json())
             .then(items => {
-                let options = '<option value="">Seleccione un producto</option>';
-                items.forEach(item => {
-                    const selected = item.id === selectedItemId ? 'selected' : '';
-                    const dataImg = item.imagen_url ? `data-img="${item.imagen_url}"` : '';
-                    options += `<option value="${item.id}" ${selected} ${dataImg}>${item.nombre}</option>`;
-                });
-                select.innerHTML = options;
+                renderOptions(items, selectedItemId);
             })
             .catch(() => {
-                select.innerHTML = '<option value="">Error al cargar productos</option>';
+                selectProd.innerHTML = '<option value="">Error al cargar productos</option>';
             });
-    } else {
-        fetch(`/productos/todos-json`)
-            .then(res => res.json())
-            .then(productos => {
-                let options = '<option value="">Seleccione un producto</option>';
-                productos.forEach(p => {
-                    const selected = p.id === selectedProductoId ? 'selected' : '';
-                    const dataImg = p.imagen_url ? `data-img="${p.imagen_url}"` : '';
-                    options += `<option value="${p.id}" ${selected} ${dataImg}>${p.nombre}</option>`;
-                });
-                select.innerHTML = options;
+    }
 
-                const opt = select.options[select.selectedIndex];
-                if (opt && !{{ $etiqueta->imagen_url ? 'true' : 'false' }}) {
-                    const url = opt.getAttribute('data-img');
+    // Cargar por CLIENTE
+    function cargarPorCliente(idCliente) {
+        selectProd.innerHTML = '<option value="">Cargando productos...</option>';
+        fetch(`/clientes/${idCliente}/productos-json`)
+            .then(r => r.json())
+            .then(productos => {
+                renderOptions(productos, selectedProductoId);
+                // Si no hay archivo y no hay imagen actual, usar imagen del producto
+                if (!{{ $etiqueta->imagen_url ? 'true' : 'false' }}) {
+                    const opt = selectProd.options[selectProd.selectedIndex];
+                    const url = opt?.getAttribute('data-img');
                     if (url) previewImg.src = url;
                 }
             })
             .catch(() => {
-                select.innerHTML = '<option value="">Error al cargar productos</option>';
+                selectProd.innerHTML = '<option value="">Error al cargar productos</option>';
             });
     }
 
+    // Cargar TODOS
+    function cargarTodos() {
+        selectProd.innerHTML = '<option value="">Cargando productos...</option>';
+        fetch(`/productos/todos-json`)
+            .then(r => r.json())
+            .then(productos => {
+                renderOptions(productos, selectedProductoId);
+                if (!{{ $etiqueta->imagen_url ? 'true' : 'false' }}) {
+                    const opt = selectProd.options[selectProd.selectedIndex];
+                    const url = opt?.getAttribute('data-img');
+                    if (url) previewImg.src = url;
+                }
+            })
+            .catch(() => {
+                selectProd.innerHTML = '<option value="">Error al cargar productos</option>';
+            });
+    }
+
+    // Lógica principal de carga
+    function cargarFuenteProductos() {
+        if (ordenId) {
+            cargarPorOrden(ordenId);
+        } else if (clienteSelect?.value) {
+            cargarPorCliente(clienteSelect.value);
+        } else {
+            cargarTodos();
+        }
+    }
+
     // Preview según producto (si NO hay archivo)
-    select?.addEventListener('change', () => {
+    selectProd?.addEventListener('change', () => {
         if (fileInput?.files?.length) return;
-        const opt = select.options[select.selectedIndex];
+        const opt = selectProd.options[selectProd.selectedIndex];
         const url = opt?.getAttribute('data-img');
         previewImg && (previewImg.src = url || placeholder);
     });
@@ -170,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Preview según archivo (tiene prioridad)
     fileInput?.addEventListener('change', () => {
         if (!fileInput.files.length) {
-            const opt = select?.options?.[select.selectedIndex];
+            const opt = selectProd?.options?.[selectProd.selectedIndex];
             const url = opt?.getAttribute('data-img');
             previewImg && (previewImg.src = url || placeholder);
             return;
@@ -179,5 +216,22 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.onload = e => { previewImg && (previewImg.src = e.target.result); };
         reader.readAsDataURL(fileInput.files[0]);
     });
+
+    // Si cambia el cliente (y no hay orden), recargar productos del cliente
+    clienteSelect?.addEventListener('change', () => {
+        if (ordenId) return; // si hay orden, el producto depende de la orden, no del cliente
+        if (clienteSelect.value) {
+            cargarPorCliente(clienteSelect.value);
+        } else {
+            cargarTodos();
+        }
+    });
+
+    // Carga inicial
+    // Si ya viene con cliente seleccionado (o no), seguirá la prioridad: orden > cliente > todos
+    if (clienteSelect && clienteIdInicial && !ordenId) {
+        clienteSelect.value = String(clienteIdInicial);
+    }
+    cargarFuenteProductos();
 });
 </script>

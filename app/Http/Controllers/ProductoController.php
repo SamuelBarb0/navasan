@@ -146,4 +146,16 @@ class ProductoController extends Controller
 
         return response()->json($productos);
     }
+
+
+    public function inventarioPorCliente(Cliente $cliente, Request $request)
+    {
+        // Si manejas multi-tenant, agrega tu filtro por cuenta_id aquí.
+        $productos = Producto::where('cliente_id', $cliente->id)
+            ->select('id', 'nombre', 'imagen as imagen_url') // ajusta los campos a tu esquema
+            ->orderBy('nombre')
+            ->get();
+
+        return response()->json($productos);
+    }
 }

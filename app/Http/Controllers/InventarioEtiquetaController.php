@@ -94,7 +94,7 @@ class InventarioEtiquetaController extends Controller
             'roles'       => auth()->user()?->getRoleNames()?->toArray(),
         ]);
 
-        if (!auth()->user()->hasAnyRole(['etiquetador', 'administrador'])) {
+        if (!auth()->user()->hasAnyRole(['almacen', 'administrador'])) {
             Log::warning('[InventarioEtiqueta.update] Permiso denegado', ['user_id' => auth()->id()]);
             return back()->with('error', 'No tienes permiso para actualizar etiquetas.');
         }

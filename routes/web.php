@@ -54,7 +54,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ordenes', [OrdenProduccionController::class, 'index'])->name('ordenes.index');
     Route::get('/ordenes/{orden}', [OrdenProduccionController::class, 'show'])->name('ordenes.show');
     Route::get('/ordenes/{orden}/productos-json', [OrdenProduccionController::class, 'productosDeOrden']);
-
 });
 
 Route::get('/ordenes/{orden}/items-json', [OrdenProduccionController::class, 'itemsJson']);
@@ -77,12 +76,13 @@ Route::middleware(['auth', 'role:preprensa|administrador'])->group(function () {
     Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
     Route::delete('/productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
     Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
-    Route::get('/productos-por-cliente/{clienteId}', [ProductoController::class, 'porCliente']);
 });
 
-    Route::get('/productos/todos-json', function () {
-        return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
-    });
+Route::get('/productos-por-cliente/{clienteId}', [ProductoController::class, 'porCliente']);
+
+Route::get('/productos/todos-json', function () {
+    return \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get();
+});
 
 Route::prefix('usuarios')->name('usuarios.')->group(function () {
     Route::get('/', [UserController::class, 'index'])->name('index');         // Mostrar todos los usuarios
@@ -216,6 +216,14 @@ Route::post('/toasts/suaje/desfase/clear', function () {
 Route::get('/ordenes/{orden}/items-json', [AcabadoController::class, 'productosPorOrden'])
     ->whereNumber('orden')
     ->name('ordenes.items_json');
+
+Route::get('/clientes/{cliente}/productos-json', [ProductoController::class, 'inventarioPorCliente'])
+    ->name('clientes.productos.json');
+
+// routes/web.php
+Route::get('/ordenes/{orden}/revisiones-json', [OrdenProduccionController::class, 'revisionesJson'])
+    ->middleware('auth');
+
 
 Route::resource('categorias', CategoriaController::class);
 Route::get('/revisiones/limpiar-toast', function () {

@@ -225,4 +225,15 @@ class OrdenProduccionController extends Controller
 
         return redirect()->route('ordenes.index')->with('success', 'Orden eliminada correctamente.');
     }
+
+    public function revisionesJson(\App\Models\OrdenProduccion $orden)
+    {
+        // Ajusta los nombres según tu modelo/relación
+        $revisiones = $orden->revisiones()
+            ->select('revisado_por', 'cantidad', 'comentarios', 'tipo', 'created_at as fecha')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($revisiones);
+    }
 }
