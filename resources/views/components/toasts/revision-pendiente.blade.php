@@ -1,54 +1,60 @@
-@php
-    // Firma del contenido (si cambia la lista, será un toast "nuevo")
-    $signature = $ordenes->isNotEmpty() ? substr(hash('sha256', $ordenes->join('|')), 0, 16) : null;
-@endphp
-
-@if($ordenes->isNotEmpty())
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
-        <div id="toastRevisionPendienteGlobal"
-             class="toast align-items-center text-bg-warning border-0 shadow"
-             role="alert" aria-live="assertive" aria-atomic="true"
-             data-bs-autohide="true" data-bs-delay="5000"
-             data-key="{{ $signature }}">
-            <div class="d-flex">
-                <div class="toast-body fw-bold">
-                    ⚠️ Por favor revisar revisión de:
-                    <ul class="mb-0">
-                        @foreach($ordenes as $numero)
-                            <li>#{{ $numero }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-                <button type="button"
-                        class="btn-close btn-close-white me-2 m-auto"
-                        data-bs-dismiss="toast"
-                        aria-label="Cerrar"></button>
-            </div>
+@if(session()->has('mostrar_toast_revision') && count(session('mostrar_toast_revision')) > 0)
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080;">
+    <div id="toastRevisionGlobal"
+         class="toast align-items-center text-bg-warning border-0 shadow"
+         role="alert" aria-live="assertive" aria-atomic="true"
+         data-bs-autohide="false">
+      <div class="d-flex">
+        <div class="toast-body fw-semibold">
+          ⚠️ Por favor revisar revisión de:
+          <ul class="mb-0">
+            @foreach(session('mostrar_toast_revision') as $num)
+              <li>#{{ $num }}</li>
+            @endforeach
+          </ul>
         </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast" aria-label="Cerrar"></button>
+      </div>
     </div>
+  </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const el = document.getElementById('toastRevisionPendienteGlobal');
-      if (!el) return;
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('toastRevisionGlobal');
+    if (!el) return;
 
-      const key = el.dataset.key || 'global';
-      const lsKey = `toastRevisionDismissed:${key}`;
+    const limpiarUrl = @json(route('revisiones.limpiar.toast'));
+    const csrf = @json(csrf_token());
+    let yaLimpio = false;
 
-      // Si ya fue descartado, no lo mostramos
-      if (localStorage.getItem(lsKey) === '1') {
-        el.remove();
-        return;
-      }
+    function limpiarServidor() {
+      if (yaLimpio) return; yaLimpio = true;
+      fetch(limpiarUrl, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).catch(() => {});
+    }
 
+    // Bootstrap 5
+    try {
       const t = new bootstrap.Toast(el);
-
-      // Al cerrarlo (por tiempo o click), marcar como descartado
-      el.addEventListener('hidden.bs.toast', () => {
-        localStorage.setItem(lsKey, '1');
-      });
+      // Cuando el toast termina de cerrarse (por la X), limpiamos
+      el.addEventListener('hidden.bs.toast', limpiarServidor);
+      // Por si quieres limpiar apenas se hace click en la X (opcional pero rápido)
+      el.querySelector('.btn-close')?.addEventListener('click', limpiarServidor);
 
       t.show();
-    });
-    </script>
+    } catch(e) {
+      // En caso extremo sin bootstrap.js, al menos “simulamos” ocultarlo
+      el.querySelector('.btn-close')?.addEventListener('click', () => {
+        el.style.display = 'none';
+        limpiarServidor();
+      });
+    }
+  });
+  </script>
 @endif

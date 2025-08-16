@@ -241,6 +241,7 @@ Route::post('/revisiones/limpiar-toast', function () {
     return response()->noContent();
 })->name('revisiones.limpiar.toast')->middleware('web');
 
+
 Route::post('/toasts/impresion/fin/clear', function (Request $r) {
     if ($sig = $r->input('sig')) {
         Cache::forever("toast_cleared:{$sig}", true);

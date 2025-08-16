@@ -8,6 +8,7 @@ use App\Models\EtapaProduccion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str; // 👈 AÑADE ESTO
 
 class RevisionController extends Controller
 {
@@ -15,12 +16,16 @@ class RevisionController extends Controller
     {
         $usuario = auth()->user();
 
+        // ⬇️ NUEVO: órdenes en cache para el toast (15 min)
+        $ordenesToast = collect(Cache::get('toast_revision_ordenes', []));
+
         // Si es administrador, mostrar todas las órdenes y revisiones sin filtro
         if ($usuario->hasRole('administrador')) {
             $revisiones = Revision::latest()->with('orden')->get();
             $ordenes = OrdenProduccion::latest()->take(20)->get();
 
-            return view('revisiones.index', compact('revisiones', 'ordenes'));
+            // ⬇️ pasa también $ordenesToast
+            return view('revisiones.index', compact('revisiones', 'ordenes', 'ordenesToast'));
         }
 
         // Obtener etapa "Revisión" asignada al usuario
@@ -31,8 +36,9 @@ class RevisionController extends Controller
         // Si no tiene etapa de revisión asignada, retornar sin órdenes
         if (!$etapa) {
             return view('revisiones.index', [
-                'revisiones' => Revision::latest()->with('orden')->get(),
-                'ordenes' => collect(),
+                'revisiones'   => Revision::latest()->with('orden')->get(),
+                'ordenes'      => collect(),
+                'ordenesToast' => $ordenesToast, // ⬅️ incluye el toast
             ]);
         }
 
@@ -59,7 +65,8 @@ class RevisionController extends Controller
 
         $revisiones = Revision::latest()->with('orden')->get();
 
-        return view('revisiones.index', compact('revisiones', 'ordenes'));
+        // ⬇️ incluye $ordenesToast en el return final
+        return view('revisiones.index', compact('revisiones', 'ordenes', 'ordenesToast'));
     }
 
 
@@ -122,22 +129,23 @@ class RevisionController extends Controller
     }
 
 
-    public function alerta(Request $request, $id)
-    {
-        $revision = Revision::with('orden')->findOrFail($id);
+public function alerta(Request $request, $id)
+{
+    $revision = Revision::with('orden')->findOrFail($id);
 
-        if ($revision->orden) {
-            $ordenes = Cache::get('toast_revision_ordenes', []);
+    if ($revision->orden) {
+        $lista = $request->session()->get('mostrar_toast_revision', []);
+        $numero = $revision->orden->numero_orden;
 
-            // Evitar duplicados
-            if (!in_array($revision->orden->numero_orden, $ordenes)) {
-                $ordenes[] = $revision->orden->numero_orden;
-            }
-
-            // Guardar en cache por 15 minutos
-            Cache::put('toast_revision_ordenes', $ordenes, now()->addMinutes(15));
+        if (!in_array($numero, $lista, true)) {
+            $lista[] = $numero;
         }
 
-        return redirect()->back();
+        // persiste hasta que lo limpies
+        $request->session()->put('mostrar_toast_revision', $lista);
     }
+
+    return back();
+}
+
 }
