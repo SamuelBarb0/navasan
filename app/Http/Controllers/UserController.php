@@ -5,70 +5,73 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $usuarios = User::with('roles')->get(); // trae los usuarios con sus roles
-        $roles = Role::all(); // importante: esto es lo que faltaba
+        $usuarios = User::with('roles')->get();
+        $roles    = Role::all();
+
         return view('usuarios.index', compact('usuarios', 'roles'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-            'roles' => 'required|array',
-            'roles.*' => 'exists:roles,name',
+            'name'     => ['required','string','max:255'],
+            'email'    => ['required','email','max:255','unique:users,email'],
+            // 👇 sin confirmed
+            'password' => ['required','string','min:8'],
+            'roles'    => ['required','array'],
+            'roles.*'  => ['exists:roles,name'],
         ]);
 
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => bcrypt($data['password']),
+            'name'     => $data['name'],
+            'email'    => $data['email'],
+            'password' => Hash::make($data['password']),
         ]);
 
-        $user->assignRole($data['roles']); // asigna múltiples
+        $user->assignRole($data['roles']);
 
-        return redirect()->back()->with('success', 'Usuario creado correctamente');
+        return back()->with('success', 'Usuario creado correctamente');
     }
-
 
     public function update(Request $request, User $usuario)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $usuario->id,
-            'roles' => 'required|array',
-            'roles.*' => 'exists:roles,name',
+            'name'    => ['required','string','max:255'],
+            'email'   => ['required','email','max:255', Rule::unique('users','email')->ignore($usuario->id)],
+            'roles'   => ['required','array'],
+            'roles.*' => ['exists:roles,name'],
+            // 👇 opcional y sin confirmed
+            'password'=> ['nullable','string','min:8'],
         ]);
 
-        $usuario->update([
-            'name' => $data['name'],
-            'email' => $data['email'],
-        ]);
+        $usuario->name  = $data['name'];
+        $usuario->email = $data['email'];
 
-        $usuario->syncRoles($data['roles']); // sincroniza múltiples
+        if (!empty($data['password'])) {
+            $usuario->password = Hash::make($data['password']);
+        }
 
-        return redirect()->back()->with('success', 'Usuario actualizado correctamente');
+        $usuario->save();
+        $usuario->syncRoles($data['roles']);
+
+        return back()->with('success', 'Usuario actualizado correctamente');
     }
-
 
     public function destroy(User $usuario)
     {
         try {
-            // Elimina todos los roles asignados (opcional, pero recomendable si hay relaciones en cascada)
             $usuario->syncRoles([]);
-
-            // Luego elimina el usuario
             $usuario->delete();
-
-            return redirect()->back()->with('success', 'Usuario eliminado correctamente');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Ocurrió un error al eliminar el usuario.');
+            return back()->with('success', 'Usuario eliminado correctamente');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Ocurrió un error al eliminar el usuario.');
         }
     }
 }
