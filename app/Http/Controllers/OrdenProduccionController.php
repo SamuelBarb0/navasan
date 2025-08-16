@@ -20,41 +20,47 @@ class OrdenProduccionController extends Controller
     public function index(Request $request)
     {
         $busqueda = $request->input('busqueda');
-        $usuario = auth()->user();
+        $usuario  = auth()->user();
 
-        // Obtener todas las etapas asignadas al usuario actual
+        // Etapas asignadas al usuario (en la PLANTILLA)
         $etapasAsignadas = \App\Models\EtapaProduccion::where('usuario_id', $usuario->id)->get();
 
-        // Obtener los IDs y órdenes de las etapas del usuario
-        $etapaIds = $etapasAsignadas->pluck('id')->toArray();
-        $ordenesEtapas = $etapasAsignadas->pluck('orden', 'id')->toArray(); // [etapa_id => orden]
+        // Si no tiene etapas asignadas y no es admin, no habrá nada que mostrar
+        $etapaIds = $etapasAsignadas->pluck('id')->all();
+        $minOrden = $etapasAsignadas->min('orden'); // p. ej. 9 para Odila
 
-        // Función para aplicar la lógica solo si el usuario no es administrador o preprensa
-        $filtroEtapas = function ($query) use ($etapaIds, $ordenesEtapas, $usuario) {
-            $query->whereHas('etapas', function ($q) use ($etapaIds, $ordenesEtapas, $usuario) {
-                $q->whereIn('etapa_produccion_id', $etapaIds)
-                    ->where('usuario_id', $usuario->id) // 👈 Asegura que sea del usuario
-                    ->whereIn('estado', ['pendiente', 'en_proceso'])
-                    ->whereNotExists(function ($subquery) use ($ordenesEtapas) {
-                        $minOrden = min($ordenesEtapas);
-                        $subquery->select(DB::raw(1))
-                            ->from('orden_etapas as anteriores')
-                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
-                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
-                            ->where('ep.orden', '<', $minOrden)
-                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
-                    });
-            });
+        // Filtro SOLO para no-admin: 
+        // - debe existir una orden_etapas de alguna etapa del usuario en (pendiente|en_proceso)
+        // - no debe existir NINGUNA etapa anterior (< minOrden) en (pendiente|en_proceso)
+        $filtroEtapas = function ($query) use ($etapaIds, $minOrden, $usuario) {
+            // si por alguna razón no tiene etapas, deja vacío
+            if (empty($etapaIds)) {
+                $query->whereRaw('1=0');
+                return;
+            }
+
+            $query
+                // 1) La orden debe tener la etapa del usuario en estado trabajable
+                ->whereHas('etapas', function ($q) use ($etapaIds) {
+                    $q->whereIn('etapa_produccion_id', $etapaIds)
+                        ->whereIn('estado', ['pendiente', 'en_proceso']);
+                })
+                // 2) Y NO debe tener etapas anteriores (< minOrden) aún pendientes/en_proceso
+                ->whereDoesntHave('etapas', function ($q) use ($minOrden) {
+                    $q->whereIn('estado', ['pendiente', 'en_proceso'])
+                        ->whereHas('etapa', function ($sub) use ($minOrden) {
+                            $sub->where('orden', '<', $minOrden);
+                        });
+                });
         };
-
 
         // Órdenes normales
         $ordenes = \App\Models\OrdenProduccion::with('cliente')
             ->when($busqueda, function ($query) use ($busqueda) {
                 $query->where(function ($sub) use ($busqueda) {
-                    $sub->where('numero_orden', 'like', "%$busqueda%")
+                    $sub->where('numero_orden', 'like', "%{$busqueda}%")
                         ->orWhereHas('items.producto', function ($q) use ($busqueda) {
-                            $q->where('codigo', 'like', "%$busqueda%");
+                            $q->where('codigo', 'like', "%{$busqueda}%");
                         });
                 });
             })
@@ -66,20 +72,19 @@ class OrdenProduccionController extends Controller
             ->get();
 
         // Devoluciones urgentes
-        $devoluciones = \App\Models\OrdenProduccion::with(['cliente', 'devolucion']) // 👈 aquí
+        $devoluciones = \App\Models\OrdenProduccion::with(['cliente', 'devolucion'])
             ->where('urgente', true)
             ->when($busqueda, function ($query) use ($busqueda) {
                 $query->where(function ($sub) use ($busqueda) {
-                    $sub->where('numero_orden', 'like', "%$busqueda%")
+                    $sub->where('numero_orden', 'like', "%{$busqueda}%")
                         ->orWhereHas('items.producto', function ($q) use ($busqueda) {
-                            $q->where('codigo', 'like', "%$busqueda%");
+                            $q->where('codigo', 'like', "%{$busqueda}%");
                         });
                 });
             })
             ->when(!$usuario->hasRole('administrador'), $filtroEtapas)
             ->orderBy('created_at', 'desc')
             ->get();
-
 
         return view('ordenes.index', compact('ordenes', 'devoluciones'));
     }
