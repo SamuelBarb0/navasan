@@ -16,6 +16,14 @@ class OrdenEtapa extends Model
         'observaciones',
     ];
 
+    // ✅ Asegura que inicio/fin (y timestamps) sean Carbon
+    protected $casts = [
+        'inicio'     => 'datetime',
+        'fin'        => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function orden()
     {
         return $this->belongsTo(\App\Models\OrdenProduccion::class, 'orden_produccion_id');
