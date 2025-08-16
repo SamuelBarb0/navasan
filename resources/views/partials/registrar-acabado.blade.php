@@ -34,17 +34,18 @@
                     </div>
 
                     @if($esSuaje)
-                        {{-- SÓLO PARA SUAJE: Cantidad liberada --}}
+                        {{-- SÓLO PARA SUAJE --}}
                         <div class="mb-3">
-                            <label class="form-label">Cantidad liberada</label>
-                            <input type="number" name="cantidad_liberada" class="form-control" min="0" step="1" required value="{{ old('cantidad_liberada') }}">
+                            <label class="form-label">Cantidad Recibida</label>
+                            <input type="number" name="cantidad_liberada" class="form-control"
+                                   min="0" step="1" required value="{{ old('cantidad_liberada') }}">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Cantidad de pliegos impresos</label>
-                            <input type="number" name="cantidad_pliegos_impresos" class="form-control" min="0" step="1" value="{{ old('cantidad_pliegos_impresos') }}">
+                            <label class="form-label">Cantidad Final</label>
+                            <input type="number" name="cantidad_pliegos_impresos" class="form-control"
+                                   min="0" step="1" value="{{ old('cantidad_pliegos_impresos') }}">
                         </div>
-
                     @else
                         {{-- Producto (según la orden) --}}
                         <div class="mb-3">
@@ -52,7 +53,9 @@
                             <select name="producto_id" id="create_producto_id" class="form-select" required>
                                 <option value="">Seleccione primero una orden</option>
                             </select>
-                            <small class="text-muted" id="ayudaProductos" style="display:none;">Mostrando productos de la orden seleccionada.</small>
+                            <small class="text-muted" id="ayudaProductos" style="display:none;">
+                                Mostrando productos de la orden seleccionada.
+                            </small>
                         </div>
 
                         {{-- Proceso --}}
@@ -70,17 +73,22 @@
                         {{-- Realizado por --}}
                         <div class="mb-3">
                             <label class="form-label">Realizado por</label>
-                            <input type="text" name="realizado_por" class="form-control" value="{{ old('realizado_por') }}" required>
+                            <input type="text" name="realizado_por" class="form-control"
+                                   value="{{ old('realizado_por') }}" required>
                         </div>
 
-                        {{-- (Opcional) Pliegos / Fecha fin --}}
+                        {{-- ✅ SIEMPRE usar Cantidad Recibida en los demás procesos --}}
                         <div class="mb-3">
-                            <label class="form-label">Cantidad de pliegos impresos (opcional)</label>
-                            <input type="number" name="cantidad_pliegos_impresos" class="form-control" min="0" step="1" value="{{ old('cantidad_pliegos_impresos') }}">
+                            <label class="form-label">Cantidad Recibida</label>
+                            <input type="number" name="cantidad_liberada" class="form-control"
+                                   min="0" step="1" required value="{{ old('cantidad_liberada') }}">
                         </div>
+
+                        {{-- Fecha fin (opcional) --}}
                         <div class="mb-3">
                             <label class="form-label">Fecha Fin (opcional)</label>
-                            <input type="datetime-local" name="fecha_fin" class="form-control" value="{{ old('fecha_fin') }}">
+                            <input type="datetime-local" name="fecha_fin" class="form-control"
+                                   value="{{ old('fecha_fin') }}">
                         </div>
                     @endif
                 </div>

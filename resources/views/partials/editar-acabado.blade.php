@@ -39,15 +39,18 @@ $esSuaje = $tipo === 'suaje-corte';
                     </div>
 
                     @if($esSuaje)
-                        {{-- SÓLO PARA SUAJE: Cantidad liberada --}}
+                        {{-- SUAJE: mapping CORRECTO con el controlador --}}
                         <div class="mb-3">
-                            <label class="form-label">Cantidad liberada</label>
-                            <input type="number" name="cantidad_liberada" id="edit_cantidad_liberada" class="form-control" min="0" step="1" required>
+                            <label class="form-label">Cantidad Recibida</label>
+                            <input type="number" name="cantidad_pliegos_impresos"
+                                   id="edit_cantidad_recibida_suaje"
+                                   class="form-control" min="0" step="1" required>
                         </div>
-
                         <div class="mb-3">
-                            <label class="form-label">Cantidad de pliegos impresos</label>
-                            <input type="number" name="cantidad_pliegos_impresos" id="edit_cantidad_pliegos_impresos_suaje" class="form-control" min="0" step="1">
+                            <label class="form-label">Cantidad Final</label>
+                            <input type="number" name="cantidad_liberada"
+                                   id="edit_cantidad_final_suaje"
+                                   class="form-control" min="0" step="1" required>
                         </div>
                     @else
                         {{-- Producto --}}
@@ -76,10 +79,19 @@ $esSuaje = $tipo === 'suaje-corte';
                             <input type="text" name="realizado_por" id="edit_realizado_por" class="form-control" required>
                         </div>
 
-                        {{-- Cantidad de pliegos impresos --}}
+                        {{-- No suaje: SIEMPRE ambas cantidades --}}
                         <div class="mb-3">
-                            <label class="form-label">Cantidad de pliegos impresos</label>
-                            <input type="number" name="cantidad_pliegos_impresos" id="edit_cantidad_pliegos_impresos" class="form-control" min="0" step="1" placeholder="Ej: 2000">
+                            <label class="form-label">Cantidad Recibida</label>
+                            <input type="number" name="cantidad_liberada"
+                                   id="edit_cantidad_liberada_ns"
+                                   class="form-control" min="0" step="1" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad Final</label>
+                            <input type="number" name="cantidad_pliegos_impresos"
+                                   id="edit_cantidad_pliegos_impresos"
+                                   class="form-control" min="0" step="1" placeholder="Ej: 2000">
                         </div>
 
                         {{-- Fecha Fin --}}
@@ -117,93 +129,85 @@ $esSuaje = $tipo === 'suaje-corte';
 
 <script>
 (() => {
-    const ES_SUAJE   = @json($esSuaje);
-    const selOrden   = document.getElementById('edit_orden_id');
-    const selProducto= document.getElementById('edit_producto_id'); // no existe en suaje
-    const ayuda      = document.getElementById('edit_ayudaProductos'); // no existe en suaje
+  // Globals
+  window.ES_SUAJE = (typeof window.ES_SUAJE !== 'undefined') ? window.ES_SUAJE : @json($esSuaje);
+  window.updateUrlTemplate = window.updateUrlTemplate || @json(route($routeUpdate ?? ($routeBase ?? '').'.update', ['id' => '__ID__']));
 
-    async function cargarProductosDeOrdenEdit(ordenId, selectedProductoId = null) {
-        if (ES_SUAJE) return;
-        if (!selProducto) return;
+  async function cargarProductosDeOrdenEdit(ordenId, selectedProductoId = null) {
+    if (window.ES_SUAJE) return;
+    const selProducto = document.getElementById('edit_producto_id');
+    const ayuda = document.getElementById('edit_ayudaProductos');
+    if (!selProducto) return;
 
-        if (!ordenId) {
-            selProducto.innerHTML = '<option value="">Seleccione primero una orden</option>';
-            if (ayuda) ayuda.style.display = 'none';
-            return;
-        }
-        selProducto.innerHTML = '<option value="">Cargando productos...</option>';
-        try {
-            const res   = await fetch(`/ordenes/${ordenId}/items-json`);
-            const items = await res.json();
+    if (!ordenId) {
+      selProducto.innerHTML = '<option value="">Seleccione primero una orden</option>';
+      if (ayuda) ayuda.style.display = 'none';
+      return;
+    }
+    selProducto.innerHTML = '<option value="">Cargando productos...</option>';
+    try {
+      const res = await fetch(`/ordenes/${ordenId}/items-json`);
+      const items = await res.json();
+      let options = '<option value="">Seleccione un producto</option>';
+      (items || []).forEach(it => {
+        const pid = it.producto_id ?? it.id;
+        const pnom = it.producto_nombre ?? it.nombre ?? `Producto ${pid}`;
+        const sel = (selectedProductoId && String(selectedProductoId) === String(pid)) ? 'selected' : '';
+        options += `<option value="${pid}" ${sel}>${pnom}</option>`;
+      });
+      selProducto.innerHTML = options;
+      if (ayuda) ayuda.style.display = 'inline';
+    } catch {
+      if (ayuda) ayuda.style.display = 'none';
+      selProducto.innerHTML = '<option value="">Error al cargar productos</option>';
+    }
+  }
 
-            let options = '<option value="">Seleccione un producto</option>';
-            (items || []).forEach(it => {
-                const pid = it.producto_id ?? it.id;
-                const pnom= it.producto_nombre ?? it.nombre ?? `Producto ${pid}`;
-                const sel = (selectedProductoId && String(selectedProductoId) === String(pid)) ? 'selected' : '';
-                options += `<option value="${pid}" ${sel}>${pnom}</option>`;
-            });
-            selProducto.innerHTML = options;
-            if (ayuda) ayuda.style.display = 'inline';
-        } catch (err) {
-            selProducto.innerHTML = '<option value="">Error al cargar productos</option>';
-            if (ayuda) ayuda.style.display = 'none';
-        }
+  // ✅ Redefinimos SIEMPRE para asegurar la lógica correcta
+  // Firma: (id, orden_id, producto_id, proceso, realizado_por, fecha_fin, cantidadFinal, _dummy=null, cantidadRecibida=null)
+  window.cargarEdicion = function(
+    id, orden_id, producto_id, proceso, realizado_por, fecha_fin,
+    cantidadFinal, _dummy = null, cantidadRecibida = null
+  ) {
+    const form = document.getElementById('formEditarAcabado');
+    form.action = String(window.updateUrlTemplate).replace('__ID__', id);
+
+    // set hidden id (por si tu update lo usa)
+    const hid = document.getElementById('edit_id');
+    if (hid) hid.value = id ?? '';
+
+    // set orden
+    const selOrden = document.getElementById('edit_orden_id');
+    if (selOrden) selOrden.value = orden_id ?? '';
+
+    if (window.ES_SUAJE) {
+      // Suaje: Final -> cantidad_liberada ; Recibida -> cantidad_pliegos_impresos
+      const inputFinal = document.getElementById('edit_cantidad_final_suaje');     // name="cantidad_liberada"
+      const inputRecib = document.getElementById('edit_cantidad_recibida_suaje');  // name="cantidad_pliegos_impresos"
+      if (inputFinal) inputFinal.value = (cantidadFinal ?? '');
+      if (inputRecib) inputRecib.value = (cantidadRecibida ?? '');
+      return;
     }
 
-    // Llamada desde el botón "Editar" en la tabla
-    // Acepta 8º parámetro: cantidadPliegosSuaje (solo suaje)
-    window.cargarEdicion = function(
-        id, orden_id, producto_id, proceso, realizado_por, fecha_fin, cantidad, cantidadPliegosSuaje = null
-    ) {
-        const form = document.getElementById('formEditarAcabado');
-        form.action = updateUrlTemplate.replace('__ID__', id);
+    // Laminado/Empalmado
+    const inputFinalNS = document.getElementById('edit_cantidad_pliegos_impresos'); // name="cantidad_pliegos_impresos"
+    const inputRecibNS = document.getElementById('edit_cantidad_liberada_ns');      // name="cantidad_liberada"
+    const selProceso   = document.getElementById('edit_proceso');
+    const txtRealizado = document.getElementById('edit_realizado_por');
+    const dtFin        = document.getElementById('edit_fecha_fin');
 
-        document.getElementById('edit_id').value = id ?? '';
-        selOrden.value = orden_id ?? '';
+    if (selProceso)   selProceso.value   = proceso ?? '';
+    if (txtRealizado) txtRealizado.value = realizado_por ?? '';
+    if (dtFin)        dtFin.value        = fecha_fin ?? '';
 
-        if (ES_SUAJE) {
-            const inputCant  = document.getElementById('edit_cantidad_liberada');
-            const inputPlieg = document.getElementById('edit_cantidad_pliegos_impresos_suaje');
-            if (inputCant)  inputCant.value  = (cantidad ?? 0);
-            if (inputPlieg) inputPlieg.value = (cantidadPliegosSuaje ?? '');
-            return;
-        }
+    if (inputFinalNS) inputFinalNS.value = (cantidadFinal ?? '');
+    if (inputRecibNS) inputRecibNS.value = (cantidadRecibida ?? '');
 
-        document.getElementById('edit_proceso').value = proceso ?? '';
-        document.getElementById('edit_realizado_por').value = realizado_por ?? '';
-        document.getElementById('edit_cantidad_pliegos_impresos').value = (cantidad ?? '') === null ? '' : (cantidad ?? '');
-        document.getElementById('edit_fecha_fin').value = fecha_fin ?? '';
-
-        cargarProductosDeOrdenEdit(selOrden.value, producto_id);
-        selOrden.onchange = (e) => cargarProductosDeOrdenEdit(e.target.value, null);
-    };
-
-    // Botón de alerta (TOAST GLOBAL) SOLO para suaje
-    if (ES_SUAJE) {
-        const btnAlerta = document.getElementById('btnAlertaSuaje');
-        const formToast = document.getElementById('toastSuajeForm');       // fuera del form principal
-        const inputMsg  = document.getElementById('toastSuajeMessage');    // hidden input
-
-        btnAlerta?.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Construir mensaje con datos actuales del modal
-            const ordenText = (() => {
-                const opt = selOrden?.options?.[selOrden.selectedIndex];
-                return opt ? (opt.textContent || opt.value || '—') : (selOrden?.value || '—');
-            })();
-            const cantLib = document.getElementById('edit_cantidad_liberada')?.value ?? '';
-            const pliegos = document.getElementById('edit_cantidad_pliegos_impresos_suaje')?.value ?? '';
-
-            const msg = `⚠ <b>Suaje</b> – Orden ${ordenText}: liberada ${cantLib || '0'}${pliegos ? ` • pliegos ${pliegos}` : ''}`;
-
-            if (formToast && inputMsg) {
-                inputMsg.value = msg;
-                formToast.submit(); // -> route('toasts.suaje.global.set') (aparece a TODOS)
-            } else {
-                console.warn('toastSuajeForm o toastSuajeMessage no existen en el DOM.');
-            }
-        });
+    // Cargar productos dependientes de la orden y seleccionar el actual
+    cargarProductosDeOrdenEdit(selOrden?.value, producto_id);
+    if (selOrden) {
+      selOrden.onchange = (e) => cargarProductosDeOrdenEdit(e.target.value, null);
     }
+  };
 })();
 </script>

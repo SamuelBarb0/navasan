@@ -83,12 +83,24 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-secondary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalEditarImpresion{{ $item->id }}">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                    </td>
+    <button class="btn btn-sm btn-outline-secondary"
+        data-bs-toggle="modal"
+        data-bs-target="#modalEditarImpresion{{ $item->id }}">
+        <i class="bi bi-pencil-square"></i>
+    </button>
+
+    <form action="{{ route('impresiones.destroy', $item->id) }}"
+          method="POST"
+          class="d-inline"
+          onsubmit="return confirm('¿Eliminar este registro? Esta acción no se puede deshacer.');">
+        @csrf
+        @method('DELETE')
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash"></i>
+        </button>
+    </form>
+</td>
+
                                 </tr>
 
                                 {{-- Modal individual de edición --}}
@@ -105,69 +117,5 @@
 {{-- Modal de creación --}}
 @include('partials.crear-impresion')
 
-{{-- Toast container --}}
-<div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
-    {{-- Toasts por impresiones sin fecha de fin --}}
-    @php
-        $ordenesSinFin = $impresiones->filter(fn($i) => is_null($i->fin_impresion))
-                                     ->pluck('orden.numero_orden')
-                                     ->unique();
-    @endphp
 
-    @foreach ($ordenesSinFin as $index => $numeroOrden)
-        <div class="toast align-items-center text-bg-warning border-0 mb-2 cursor-pointer"
-             role="alert" aria-live="assertive" aria-atomic="true"
-             data-bs-delay="6000" id="toastFin{{ $index }}"
-             onclick="window.location.href='{{ route('impresiones.index') }}'">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ⚠️ La orden <strong>#{{ $numeroOrden }}</strong> aún no tiene registrada la <strong>fecha de fin de impresión</strong>.
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                        data-bs-dismiss="toast" aria-label="Cerrar"></button>
-            </div>
-        </div>
-    @endforeach
-
-    {{-- Toasts por diferencias de pliegos --}}
-    @php
-        $diferencias = $impresiones->filter(function ($i) {
-            return !is_null($i->cantidad_pliegos)
-                && !is_null($i->cantidad_pliegos_impresos)
-                && $i->cantidad_pliegos !== $i->cantidad_pliegos_impresos;
-        });
-    @endphp
-
-    @foreach ($diferencias as $index => $i)
-        @php
-            $orden = $i->orden->numero_orden ?? 'N/A';
-            $msg = $i->cantidad_pliegos_impresos > $i->cantidad_pliegos
-                ? "⚠️ La orden <strong>#{$orden}</strong> tiene más pliegos impresos que los solicitados."
-                : "⚠️ La orden <strong>#{$orden}</strong> tiene menos pliegos impresos que los solicitados.";
-        @endphp
-        <div class="toast align-items-center text-bg-warning border-0 mb-2"
-             role="alert" aria-live="assertive" aria-atomic="true"
-             data-bs-delay="6000" id="toastPliegos{{ $index }}">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {!! $msg !!}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                        data-bs-dismiss="toast" aria-label="Cerrar"></button>
-            </div>
-        </div>
-    @endforeach
-</div>
-
-
-{{-- Script para mostrar los toasts automáticamente --}}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const toastElements = document.querySelectorAll('.toast');
-        toastElements.forEach(toastEl => {
-            const toast = new bootstrap.Toast(toastEl);
-            toast.show();
-        });
-    });
-</script>
 @endsection

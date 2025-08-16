@@ -116,6 +116,8 @@ Route::middleware(['auth', 'role:impresion|preprensa|administrador'])->group(fun
     Route::get('/impresiones', [ImpresionController::class, 'index'])->name('impresiones.index');
     Route::post('/impresiones', [ImpresionController::class, 'store'])->name('impresiones.store');
     Route::put('/impresiones/{id}', [ImpresionController::class, 'update'])->name('impresiones.update');
+    Route::delete('/impresiones/{impresion}', [ImpresionController::class, 'destroy'])
+        ->name('impresiones.destroy');
 });
 
 // =========================
@@ -161,6 +163,12 @@ Route::middleware(['auth', 'role:almacen|administrador'])->group(function () {
 // =========================
 Route::middleware(['auth', 'role:devoluciones|administrador'])->group(function () {
     Route::resource('devoluciones', DevolucionController::class)->only(['index', 'store']);
+    Route::get('/ordenes/{orden}/revisiones', [DevolucionController::class, 'revisionesPorOrden'])
+        ->middleware('auth')
+        ->name('ordenes.revisiones');
+    Route::delete('/devoluciones/{devolucion}', [DevolucionController::class, 'destroy'])
+        ->middleware('auth')
+        ->name('devoluciones.destroy');
 });
 
 // =========================
@@ -226,9 +234,35 @@ Route::get('/ordenes/{orden}/revisiones-json', [OrdenProduccionController::class
 
 
 Route::resource('categorias', CategoriaController::class);
+
 Route::post('/revisiones/limpiar-toast', function () {
     session()->forget('mostrar_toast_revision');
     Cache::forget('toast_revision_ordenes'); // por si lo usaste antes
     return response()->noContent();
 })->name('revisiones.limpiar.toast')->middleware('web');
+
+Route::post('/toasts/impresion/fin/clear', function (Request $r) {
+    if ($sig = $r->input('sig')) {
+        Cache::forever("toast_cleared:{$sig}", true);
+    } else {
+        // Fallback a tu lógica anterior
+        $numero = (string) $r->input('numero');
+        if ($numero !== '') {
+            Cache::forever("toast_impresion_fin_cleared:{$numero}", true);
+        }
+    }
+    return back();
+})->middleware('auth')->name('toasts.impresion.fin.clear');
+
+Route::post('/toasts/impresion/diff/clear', function (Request $r) {
+    if ($sig = $r->input('sig')) {
+        Cache::forever("toast_cleared:{$sig}", true);
+    } else {
+        $id = (int) $r->input('impresion_id');
+        if ($id > 0) {
+            Cache::forever("toast_impresion_diff_cleared:{$id}", true);
+        }
+    }
+    return back();
+})->middleware('auth')->name('toasts.impresion.diff.clear');
 require __DIR__ . '/auth.php';

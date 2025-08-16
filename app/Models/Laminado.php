@@ -13,12 +13,14 @@ class Laminado extends Model
         'proceso', // 'laminado_mate' | 'laminado_brillante'
         'realizado_por',
         'producto_id',
-        'cantidad_pliegos_impresos',
+        'cantidad_liberada',         // 👈 agregado
+        'cantidad_pliegos_impresos', // (opcional) Cantidad Final
         'fecha_fin',
     ];
 
     protected $casts = [
-        'fecha_fin' => 'datetime',
+        'fecha_fin'                 => 'datetime',
+        'cantidad_liberada'         => 'integer',
         'cantidad_pliegos_impresos' => 'integer',
     ];
 
@@ -30,14 +32,14 @@ class Laminado extends Model
     public function getProcesoNombreAttribute(): string
     {
         return match ($this->proceso) {
-            'laminado_mate' => 'Laminado Mate',
+            'laminado_mate'      => 'Laminado Mate',
             'laminado_brillante' => 'Laminado Brillante',
-            default => ucfirst(str_replace('_', ' ', (string)$this->proceso)),
+            default              => ucfirst(str_replace('_', ' ', (string) $this->proceso)),
         };
     }
 
     public function producto()
     {
-        return $this->belongsTo(\App\Models\Producto::class, 'producto_id');
+        return $this->belongsTo(Producto::class, 'producto_id');
     }
 }
