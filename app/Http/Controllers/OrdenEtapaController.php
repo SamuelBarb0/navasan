@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\OrdenEtapa;
 use App\Models\OrdenProduccion;
+// use App\Models\EtapaProduccion; // <- No es necesario si ordenamos en PHP
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 
 class OrdenEtapaController extends Controller
 {
@@ -46,15 +48,21 @@ class OrdenEtapaController extends Controller
                 ->with('error', 'Ya hay una etapa activa en proceso.');
         }
 
-        // 2) ¿Hay etapas anteriores incompletas?
-        $etapasOrdenadas = $orden->etapas()->with('etapa')->orderBy('id')->get();
+        // 2) ¿Hay etapas anteriores incompletas?  ➜ ORDEN por etapa_produccions.orden
+        // Traemos todas con la relación y ORDENAMOS por el campo 'orden' de la relación.
+        $etapasOrdenadas = $orden->etapas()
+            ->with('etapa')  // etapa->orden
+            ->get()
+            ->sortBy(fn ($e) => $e->etapa->orden ?? PHP_INT_MAX) // si no hay relación, lo manda al final
+            ->values();
+
         $indiceActual = $etapasOrdenadas->search(fn ($e) => (int)$e->id === (int)$etapa->id);
 
         if ($indiceActual === false) {
             Log::error('INICIAR_ETAPA::indice_no_encontrado', [
-                'orden_id'  => $orden->id,
-                'etapa_id'  => $etapa->id,
-                'etapas_ids'=> $etapasOrdenadas->pluck('id')->all(),
+                'orden_id'   => $orden->id,
+                'etapa_id'   => $etapa->id,
+                'etapas_ids' => $etapasOrdenadas->pluck('id')->all(),
             ]);
             if ($isDebug) {
                 throw new \RuntimeException("No se encontró la etapa {$etapa->id} dentro de la orden {$orden->id}.");
@@ -70,13 +78,14 @@ class OrdenEtapaController extends Controller
             $detalle = $incompletas->map(fn ($e) => [
                 'id'     => $e->id,
                 'nombre' => optional($e->etapa)->nombre,
+                'orden'  => optional($e->etapa)->orden,
                 'estado' => $e->estado,
             ])->values()->all();
 
             Log::warning('INICIAR_ETAPA::bloqueado_por_anteriores', [
-                'orden_id'  => $orden->id,
-                'etapa_id'  => $etapa->id,
-                'detalle'   => $detalle,
+                'orden_id' => $orden->id,
+                'etapa_id' => $etapa->id,
+                'detalle'  => $detalle,
             ]);
 
             if ($isDebug) {
@@ -193,20 +202,40 @@ class OrdenEtapaController extends Controller
         }
     }
 
-    /** Helper: loguea el estado de todas las etapas de la orden */
+    /** Helper: formatea datetimes vengan como Carbon, string o null */
+    private function fmtDT($value): ?string
+    {
+        if (empty($value)) return null;
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+        try {
+            return Carbon::parse($value)->toDateTimeString();
+        } catch (\Throwable $e) {
+            return (string) $value; // si no se puede parsear, lo registramos tal cual
+        }
+    }
+
+    /** Helper: loguea el estado de todas las etapas de la orden (ordenadas por etapa.orden) */
     private function logEtapasEstado(?OrdenProduccion $orden, string $label): void
     {
         if (!$orden) {
             Log::warning($label, ['orden' => null]);
             return;
         }
-        $etapas = $orden->etapas()->with('etapa')->orderBy('id')->get()
+
+        $etapas = $orden->etapas()
+            ->with('etapa')
+            ->get()
+            ->sortBy(fn ($e) => $e->etapa->orden ?? PHP_INT_MAX)
+            ->values()
             ->map(fn ($e) => [
                 'id'     => $e->id,
                 'nombre' => optional($e->etapa)->nombre,
+                'orden'  => optional($e->etapa)->orden,
                 'estado' => $e->estado,
-                'inicio' => $e->inicio?->toDateTimeString(),
-                'fin'    => $e->fin?->toDateTimeString(),
+                'inicio' => $this->fmtDT($e->inicio),
+                'fin'    => $this->fmtDT($e->fin),
             ])->all();
 
         Log::info($label, [
