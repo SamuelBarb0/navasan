@@ -29,7 +29,7 @@ class ItemOrden extends Model
         return $this->hasMany(ItemEntrega::class);
     }
 
-        public function insumos()
+    public function insumos()
     {
         return $this->belongsTo(Insumo::class);
     }
