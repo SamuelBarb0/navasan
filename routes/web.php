@@ -202,24 +202,51 @@ Route::prefix('empalmado')->name('empalmado.')->group(function () {
 
 
 
-// Setear aviso global (lo ve todo el mundo)
-Route::post('/toasts/suaje/global/set', function (Request $r) {
-    $msg = $r->input('message', '⚠ Aviso global de suaje');
-    Cache::forever('toast_suaje_global', $msg);
-    return back();
-})->name('toasts.suaje.global.set');
+// Setear aviso (global o desfase) para suaje | laminado | empalmado
+Route::post('/toasts/{tipo}/{scope}/set', function (Request $r, string $tipo, string $scope) {
+    $tipos  = ['suaje','laminado','empalmado'];
+    $scopes = ['global','desfase'];
 
-// Quitar aviso global
-Route::post('/toasts/suaje/global/clear', function () {
-    Cache::forget('toast_suaje_global');
-    return back();
-})->name('toasts.suaje.global.clear');
+    if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
+        abort(404);
+    }
 
+    // Mensaje por defecto amigable
+    $porDefecto = $scope === 'desfase'
+        ? "⚠ Desfase en " . ucfirst($tipo)
+        : "⚠ Aviso global de " . $tipo;
 
-Route::post('/toasts/suaje/desfase/clear', function () {
-    Cache::forget('toast_suaje_desfase_global');
+    $msg = (string) $r->input('message', $porDefecto);
+
+    $key = $scope === 'desfase'
+        ? "toast_{$tipo}_desfase_global"
+        : "toast_{$tipo}_global";
+
+    Cache::forever($key, $msg);
     return back();
-})->name('toasts.suaje.desfase.clear');
+})->name('toasts.set');
+
+Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scope) {
+    $tipos  = ['suaje','laminado','empalmado'];
+    $scopes = ['global','desfase'];
+
+    if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
+        abort(404);
+    }
+
+    // Si no es admin, no tocar cache y solo recargar
+    $user = request()->user();
+    if (!$user || !$user->hasRole('administrador')) {
+        return back(); // recarga sin cambios
+    }
+
+    $key = $scope === 'desfase'
+        ? "toast_{$tipo}_desfase_global"
+        : "toast_{$tipo}_global";
+
+    \Illuminate\Support\Facades\Cache::forget($key);
+    return back()->with('success', 'Alerta cerrada.');
+})->name('toasts.clear'); 
 
 Route::get('/ordenes/{orden}/items-json', [AcabadoController::class, 'productosPorOrden'])
     ->whereNumber('orden')

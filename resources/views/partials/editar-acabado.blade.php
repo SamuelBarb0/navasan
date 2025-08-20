@@ -121,7 +121,7 @@ $esSuaje = $tipo === 'suaje-corte';
 
 {{-- Form oculto para el toast GLOBAL: DEBE ESTAR FUERA DEL FORM PRINCIPAL --}}
 @if($esSuaje)
-<form id="toastSuajeForm" action="{{ route('toasts.suaje.global.set') }}" method="POST" class="d-none">
+<form id="toastSuajeForm" action="{{ route('toasts.set', ['tipo'=>'suaje','scope'=>'global']) }}" method="POST" class="d-none">
     @csrf
     <input type="hidden" name="message" id="toastSuajeMessage">
 </form>
@@ -150,9 +150,9 @@ $esSuaje = $tipo === 'suaje-corte';
       const items = await res.json();
       let options = '<option value="">Seleccione un producto</option>';
       (items || []).forEach(it => {
-        const pid = it.producto_id ?? it.id;
+        const pid  = it.producto_id ?? it.id;
         const pnom = it.producto_nombre ?? it.nombre ?? `Producto ${pid}`;
-        const sel = (selectedProductoId && String(selectedProductoId) === String(pid)) ? 'selected' : '';
+        const sel  = (selectedProductoId && String(selectedProductoId) === String(pid)) ? 'selected' : '';
         options += `<option value="${pid}" ${sel}>${pnom}</option>`;
       });
       selProducto.innerHTML = options;
@@ -172,7 +172,7 @@ $esSuaje = $tipo === 'suaje-corte';
     const form = document.getElementById('formEditarAcabado');
     form.action = String(window.updateUrlTemplate).replace('__ID__', id);
 
-    // set hidden id (por si tu update lo usa)
+    // set hidden id
     const hid = document.getElementById('edit_id');
     if (hid) hid.value = id ?? '';
 
@@ -209,5 +209,36 @@ $esSuaje = $tipo === 'suaje-corte';
       selOrden.onchange = (e) => cargarProductosDeOrdenEdit(e.target.value, null);
     }
   };
+
+  // 🛎️ Avisar al equipo (SUAJE): arma mensaje y envía el form oculto
+  const btnAviso = document.getElementById('btnAlertaSuaje');
+  if (btnAviso) {
+    btnAviso.addEventListener('click', () => {
+      const selOrden   = document.getElementById('edit_orden_id');
+      const finalEl    = document.getElementById('edit_cantidad_final_suaje');     // name="cantidad_liberada"
+      const recibEl    = document.getElementById('edit_cantidad_recibida_suaje');  // name="cantidad_pliegos_impresos"
+      const msgInput   = document.getElementById('toastSuajeMessage');
+      const formToast  = document.getElementById('toastSuajeForm');
+
+      const ordenTxt = selOrden?.options[selOrden.selectedIndex]?.text?.trim() || '';
+      const finalVal = parseInt(finalEl?.value ?? '0', 10) || 0;
+      const recibVal = parseInt(recibEl?.value ?? '0', 10) || 0;
+
+      let msg = `⚠ <b>Aviso global de Suaje</b>`;
+      if (ordenTxt) msg += ` – Orden <b>${ordenTxt}</b>`;
+      if (finalVal || recibVal) {
+        const diff = finalVal - recibVal;
+        msg += ` — <b>Final:</b> ${finalVal} | <b>Recibida:</b> ${recibVal}`;
+        if (finalVal !== recibVal) {
+          msg += ` (<b>${diff > 0 ? '+' : ''}${diff}</b>)`;
+        }
+      }
+
+      if (msgInput && formToast) {
+        msgInput.value = msg;
+        formToast.submit();
+      }
+    });
+  }
 })();
 </script>

@@ -38,8 +38,14 @@
     <x-toasts.impresiones-pendientes />
     <x-toasts.alertas-impresion />
     <x-toasts.revision-pendiente />
-    <x-toasts.suaje-alerta /> {{-- 🔹 Nuevo --}}
-    <x-toasts.suaje-desfase /> {{-- 🔹 Nuevo: alerta “liberada < impresa” --}}
+    <x-toasts.suaje-alerta /> {{-- suaje (global/info) --}}
+    <x-toasts.suaje-desfase /> {{-- suaje (desfase) --}}
+
+    <x-toasts.suaje-alerta tipo="laminado" /> {{-- laminado (global/info) --}}
+    <x-toasts.suaje-desfase tipo="laminado" /> {{-- laminado (desfase) --}}
+
+    <x-toasts.suaje-alerta tipo="empalmado" /> {{-- empalmado (global/info) --}}
+    <x-toasts.suaje-desfase tipo="empalmado" /> {{-- empalmado (desfase) --}}
 
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

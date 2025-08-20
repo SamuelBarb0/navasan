@@ -124,8 +124,9 @@ class AcabadoController extends Controller
                 'cantidad_pliegos_impresos' => (int) $validated['cantidad_pliegos_impresos'],
             ]);
 
+            // ALERTA de desfase (Suaje/Corte)
             $warning = $this->dispararDesfaseSuajeSiAplica(
-                $validated['orden_id'],
+                (int) $validated['orden_id'],
                 (int) $validated['cantidad_liberada'],
                 (int) $validated['cantidad_pliegos_impresos']
             );
@@ -173,6 +174,21 @@ class AcabadoController extends Controller
             'fecha_fin'                 => $validated['fecha_fin'] ?? null,
         ], $extra));
 
+        // ALERTA de desfase (Laminado / Empalmado)
+        $tipoTitulo = ($key === 'laminado') ? 'Laminado' : 'Empalmado';
+        $warning = $this->dispararDesfaseAcabadoSiAplica(
+            (int) $validated['orden_id'],
+            isset($validated['cantidad_pliegos_impresos']) ? (int) $validated['cantidad_pliegos_impresos'] : null, // FINAL
+            (int) $validated['cantidad_liberada'], // RECIBIDA
+            $tipoTitulo
+        );
+
+        if ($warning) {
+            return back()
+                ->with('success', 'Proceso registrado en ' . $cfg['title'] . '.')
+                ->with('warning_extra', $warning);
+        }
+
         return back()->with('success', 'Proceso registrado en ' . $cfg['title'] . '.');
     }
 
@@ -212,8 +228,9 @@ class AcabadoController extends Controller
                 'cantidad_pliegos_impresos' => (int) $validated['cantidad_pliegos_impresos'],
             ]);
 
+            // ALERTA de desfase (Suaje/Corte)
             $warning = $this->dispararDesfaseSuajeSiAplica(
-                $validated['orden_id'],
+                (int) $validated['orden_id'],
                 (int) $validated['cantidad_liberada'],
                 (int) $validated['cantidad_pliegos_impresos']
             );
@@ -262,6 +279,21 @@ class AcabadoController extends Controller
             'fecha_fin'                 => $validated['fecha_fin'] ?? null,
         ], $extra));
 
+        // ALERTA de desfase (Laminado / Empalmado)
+        $tipoTitulo = ($key === 'laminado') ? 'Laminado' : 'Empalmado';
+        $warning = $this->dispararDesfaseAcabadoSiAplica(
+            (int) $validated['orden_id'],
+            isset($validated['cantidad_pliegos_impresos']) ? (int) $validated['cantidad_pliegos_impresos'] : null, // FINAL
+            (int) $validated['cantidad_liberada'], // RECIBIDA
+            $tipoTitulo
+        );
+
+        if ($warning) {
+            return back()
+                ->with('success', 'Proceso actualizado en ' . $cfg['title'] . '.')
+                ->with('warning_extra', $warning);
+        }
+
         return back()->with('success', 'Proceso actualizado en ' . $cfg['title'] . '.');
     }
 
@@ -299,6 +331,29 @@ class AcabadoController extends Controller
         }
 
         Cache::forever('toast_suaje_desfase_global', $msg);
+        return $msg;
+    }
+
+    /**
+     * Desfase para Laminado / Empalmado.
+     * - $final  = cantidad_pliegos_impresos (puede ser null)
+     * - $recibida = cantidad_liberada
+     */
+    private function dispararDesfaseAcabadoSiAplica(int $ordenId, ?int $final, int $recibida, string $tipo): ?string
+    {
+        if (is_null($final) || $recibida <= 0) return null;
+        if ($final === $recibida) return null;
+
+        $orden = OrdenProduccion::find($ordenId);
+        $ordenTxt = $orden->numero_orden ?? $ordenId;
+
+        if ($final > $recibida) {
+            $msg = "⚠ <b>Desfase en {$tipo}</b> – Orden {$ordenTxt}: la <b>cantidad final</b> es <b>mayor</b> que la recibida ({$final} &gt; {$recibida}). Verificar.";
+        } else {
+            $msg = "⚠ <b>Desfase en {$tipo}</b> – Orden {$ordenTxt}: la <b>cantidad final</b> es <b>menor</b> que la recibida ({$final} &lt; {$recibida}). Revisar antes de despachar.";
+        }
+
+        Cache::forever('toast_' . strtolower($tipo) . '_desfase_global', $msg);
         return $msg;
     }
 }
