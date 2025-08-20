@@ -18,7 +18,7 @@ class ImpresionController extends Controller
         if ($usuario->hasRole('administrador')) {
             $impresiones = Impresion::with('orden')->latest()->get();
             $ordenes = OrdenProduccion::latest()->take(20)->get();
-            return view('impresiones.index', compact('impresiones', 'orderes'));
+            return view('impresiones.index', compact('impresiones', 'ordenes'));
         }
 
         // Etapa "Impresión" (sin importar asignación de usuario)
