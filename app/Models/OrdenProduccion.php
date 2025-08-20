@@ -62,7 +62,10 @@ class OrdenProduccion extends Model
         return $this->hasOne(\App\Models\Devolucion::class, 'orden_id', 'id');
     }
 
-
+    public function suajes()
+    {
+        return $this->hasMany(\App\Models\Suajes::class, 'orden_id');
+    }
 
     public static function ordenesListasParaEtapa($nombreEtapa)
     {
