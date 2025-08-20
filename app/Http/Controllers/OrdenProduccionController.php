@@ -89,8 +89,6 @@ class OrdenProduccionController extends Controller
         return view('ordenes.index', compact('ordenes', 'devoluciones'));
     }
 
-
-
     public function show($id)
     {
         $orden = \App\Models\OrdenProduccion::with([

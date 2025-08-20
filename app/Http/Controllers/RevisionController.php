@@ -19,44 +19,38 @@ class RevisionController extends Controller
         // ⬇️ NUEVO: órdenes en cache para el toast (15 min)
         $ordenesToast = collect(Cache::get('toast_revision_ordenes', []));
 
-        // Si es administrador, mostrar todas las órdenes y revisiones sin filtro
+        // 👑 Administrador: ver todo sin filtro
         if ($usuario->hasRole('administrador')) {
             $revisiones = Revision::latest()->with('orden')->get();
             $ordenes = OrdenProduccion::latest()->take(20)->get();
-
-            // ⬇️ pasa también $ordenesToast
             return view('revisiones.index', compact('revisiones', 'ordenes', 'ordenesToast'));
         }
 
-        // Obtener etapa "Revisión" asignada al usuario
-        $etapa = EtapaProduccion::where('usuario_id', $usuario->id)
-            ->where('nombre', 'Revisión')
-            ->first();
+        // Etapa "Revisión" (no importa a quién esté asignada)
+        $etapa = EtapaProduccion::where('nombre', 'Revisión')->first();
 
-        // Si no tiene etapa de revisión asignada, retornar sin órdenes
         if (!$etapa) {
             return view('revisiones.index', [
                 'revisiones'   => Revision::latest()->with('orden')->get(),
                 'ordenes'      => collect(),
-                'ordenesToast' => $ordenesToast, // ⬅️ incluye el toast
+                'ordenesToast' => $ordenesToast,
             ]);
         }
 
-        $etapaId = $etapa->id;
+        $etapaId    = $etapa->id;
         $ordenEtapa = $etapa->orden;
 
         $ordenes = OrdenProduccion::with('cliente')
-            ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
+            // ✅ debe tener la etapa de Revisión pendiente/en_proceso
+            ->whereHas('etapas', function ($q) use ($etapaId) {
                 $q->where('etapa_produccion_id', $etapaId)
-                    ->where('usuario_id', $usuario->id)
-                    ->whereIn('estado', ['pendiente', 'en_proceso'])
-                    ->whereNotExists(function ($subquery) use ($ordenEtapa) {
-                        $subquery->select(DB::raw(1))
-                            ->from('orden_etapas as anteriores')
-                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
-                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
-                            ->where('ep.orden', '<', $ordenEtapa)
-                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
+                    ->whereIn('estado', ['pendiente', 'en_proceso']);
+            })
+            // ❌ no debe tener etapas anteriores pendientes/en_proceso
+            ->whereDoesntHave('etapas', function ($q) use ($ordenEtapa) {
+                $q->whereIn('estado', ['pendiente', 'en_proceso'])
+                    ->whereHas('etapa', function ($sub) use ($ordenEtapa) {
+                        $sub->where('orden', '<', $ordenEtapa);
                     });
             })
             ->latest()
@@ -65,7 +59,6 @@ class RevisionController extends Controller
 
         $revisiones = Revision::latest()->with('orden')->get();
 
-        // ⬇️ incluye $ordenesToast en el return final
         return view('revisiones.index', compact('revisiones', 'ordenes', 'ordenesToast'));
     }
 
@@ -129,23 +122,22 @@ class RevisionController extends Controller
     }
 
 
-public function alerta(Request $request, $id)
-{
-    $revision = Revision::with('orden')->findOrFail($id);
+    public function alerta(Request $request, $id)
+    {
+        $revision = Revision::with('orden')->findOrFail($id);
 
-    if ($revision->orden) {
-        $lista = $request->session()->get('mostrar_toast_revision', []);
-        $numero = $revision->orden->numero_orden;
+        if ($revision->orden) {
+            $lista = $request->session()->get('mostrar_toast_revision', []);
+            $numero = $revision->orden->numero_orden;
 
-        if (!in_array($numero, $lista, true)) {
-            $lista[] = $numero;
+            if (!in_array($numero, $lista, true)) {
+                $lista[] = $numero;
+            }
+
+            // persiste hasta que lo limpies
+            $request->session()->put('mostrar_toast_revision', $lista);
         }
 
-        // persiste hasta que lo limpies
-        $request->session()->put('mostrar_toast_revision', $lista);
+        return back();
     }
-
-    return back();
-}
-
 }

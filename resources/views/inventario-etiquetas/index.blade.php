@@ -146,8 +146,7 @@
             @endphp
             <tr>
               <td>
-                <img src="{{ $imgUrl }}" alt="img"
-                  style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #eee;">
+                <img src="{{ $imgUrl }}" alt="img"  style="max-width:80px;object-fit:cover;border-radius:8px;border:1px solid #eee;">
               </td>
               <td>
                 @if($item->orden)

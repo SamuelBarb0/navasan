@@ -18,36 +18,33 @@ class ImpresionController extends Controller
         if ($usuario->hasRole('administrador')) {
             $impresiones = Impresion::with('orden')->latest()->get();
             $ordenes = OrdenProduccion::latest()->take(20)->get();
-            return view('impresiones.index', compact('impresiones', 'ordenes'));
+            return view('impresiones.index', compact('impresiones', 'orderes'));
         }
 
-        // 🧑‍🔧 Responsable: buscar etapa "Impresión" asignada a él
-        $etapa = EtapaProduccion::where('usuario_id', $usuario->id)
-            ->where('nombre', 'Impresión')
-            ->first();
+        // Etapa "Impresión" (sin importar asignación de usuario)
+        $etapa = EtapaProduccion::where('nombre', 'Impresión')->first();
 
         if (!$etapa) {
             return view('impresiones.index', [
                 'impresiones' => Impresion::with('orden')->latest()->get(),
-                'ordenes' => collect(),
+                'ordenes'     => collect(),
             ]);
         }
 
-        $etapaId    = $etapa->id;
-        $ordenEtapa = $etapa->orden;
+        $etapaId     = $etapa->id;
+        $ordenEtapa  = $etapa->orden;
 
         $ordenes = OrdenProduccion::with('cliente')
-            ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
+            // Debe tener la etapa de Impresión en estado trabajable
+            ->whereHas('etapas', function ($q) use ($etapaId) {
                 $q->where('etapa_produccion_id', $etapaId)
-                    ->where('usuario_id', $usuario->id)
-                    ->whereIn('estado', ['pendiente', 'en_proceso'])
-                    ->whereNotExists(function ($subquery) use ($ordenEtapa) {
-                        $subquery->select(DB::raw(1))
-                            ->from('orden_etapas as anteriores')
-                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
-                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
-                            ->where('ep.orden', '<', $ordenEtapa)
-                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
+                    ->whereIn('estado', ['pendiente', 'en_proceso']);
+            })
+            // No debe tener etapas anteriores pendientes/en_proceso
+            ->whereDoesntHave('etapas', function ($q) use ($ordenEtapa) {
+                $q->whereIn('estado', ['pendiente', 'en_proceso'])
+                    ->whereHas('etapa', function ($sub) use ($ordenEtapa) {
+                        $sub->where('orden', '<', $ordenEtapa);
                     });
             })
             ->latest()
@@ -130,24 +127,18 @@ class ImpresionController extends Controller
         return redirect()->back()->with('success', 'Impresión actualizada correctamente.');
     }
 
-    public function destroy($id)
-    {
-        $impresion = Impresion::findOrFail($id);
-        $usuario   = auth()->user();
+   public function destroy($id)
+{
+    $impresion = Impresion::findOrFail($id);
 
-        if (!$usuario->hasRole('administrador')) {
-            return redirect()->back()->withErrors([
-                'permiso' => 'No tienes permisos para eliminar este registro.'
-            ]);
-        }
-
-        try {
-            $impresion->delete();
-            return redirect()->back()->with('success', 'Registro de impresión eliminado.');
-        } catch (\Throwable $e) {
-            return redirect()->back()->withErrors([
-                'delete' => 'No se pudo eliminar el registro.'
-            ]);
-        }
+    try {
+        $impresion->delete();
+        return redirect()->back()->with('success', 'Registro de impresión eliminado.');
+    } catch (\Throwable $e) {
+        return redirect()->back()->withErrors([
+            'delete' => 'No se pudo eliminar el registro.'
+        ]);
     }
+}
+
 }
