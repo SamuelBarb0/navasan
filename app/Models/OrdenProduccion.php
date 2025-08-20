@@ -96,7 +96,7 @@ class OrdenProduccion extends Model
                     ->whereIn(DB::raw('LOWER(anteriores.estado)'), ['pendiente', 'en_proceso']);
             })
             ->latest()
-            ->take(10)
+            ->take(20)
             ->get();
 }
 }
