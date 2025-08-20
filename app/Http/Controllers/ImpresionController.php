@@ -7,6 +7,7 @@ use App\Models\Impresion;
 use App\Models\EtapaProduccion;
 use App\Models\OrdenProduccion;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ImpresionController extends Controller
 {
@@ -14,45 +15,62 @@ class ImpresionController extends Controller
     {
         $usuario = auth()->user();
 
-        // 👑 Administrador: ver todo
         if ($usuario->hasRole('administrador')) {
             $impresiones = Impresion::with('orden')->latest()->get();
             $ordenes = OrdenProduccion::latest()->take(20)->get();
             return view('impresiones.index', compact('impresiones', 'ordenes'));
         }
 
-        // 🧑‍🔧 Responsable: buscar etapa "Impresión" asignada a él
-        $etapa = EtapaProduccion::where('usuario_id', $usuario->id)
-            ->where('nombre', 'Impresión')
-            ->first();
+        // 1) Buscar etapa "Impresión" tolerando tilde/no tilde
+        $etapa = EtapaProduccion::whereIn('nombre', ['Impresión', 'Impresion'])->first();
 
         if (!$etapa) {
+            Log::warning('[Impresiones] No existe etapa Impresión/Impresion en BD');
             return view('impresiones.index', [
                 'impresiones' => Impresion::with('orden')->latest()->get(),
-                'ordenes' => collect(),
+                'ordenes'     => collect(),
             ]);
         }
 
         $etapaId    = $etapa->id;
         $ordenEtapa = $etapa->orden;
 
+        // 2) Query tolerante a mayúsculas en estado
         $ordenes = OrdenProduccion::with('cliente')
-            ->whereHas('etapas', function ($q) use ($usuario, $etapaId, $ordenEtapa) {
+            // Debe tener la etapa de Impresión en estado trabajable
+            ->whereHas('etapas', function ($q) use ($etapaId) {
                 $q->where('etapa_produccion_id', $etapaId)
-                    ->where('usuario_id', $usuario->id)
-                    ->whereIn('estado', ['pendiente', 'en_proceso'])
-                    ->whereNotExists(function ($subquery) use ($ordenEtapa) {
-                        $subquery->select(DB::raw(1))
-                            ->from('orden_etapas as anteriores')
-                            ->join('etapa_produccions as ep', 'anteriores.etapa_produccion_id', '=', 'ep.id')
-                            ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
-                            ->where('ep.orden', '<', $ordenEtapa)
-                            ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
+                    ->whereIn(DB::raw('LOWER(estado)'), ['pendiente', 'en_proceso']);
+            })
+            // No debe tener etapas anteriores pendientes o en_proceso
+            ->whereDoesntHave('etapas', function ($q) use ($ordenEtapa) {
+                $q->whereIn(DB::raw('LOWER(estado)'), ['pendiente', 'en_proceso'])
+                    ->whereHas('etapa', function ($sub) use ($ordenEtapa) {
+                        $sub->where('orden', '<', $ordenEtapa);
                     });
             })
             ->latest()
             ->take(20)
-            ->get();
+            ->get(['id', 'numero_orden', 'cliente_id', 'created_at']);
+
+        // 3) Log de debug: cuántas y cuáles IDs trae
+        Log::info('[Impresiones] Ordenes para etapa Impresión', [
+            'count' => $ordenes->count(),
+            'ids'   => $ordenes->pluck('id')->all(),
+        ]);
+
+        // 4) (Opcional) inspección de bloqueos para una orden que esperes ver
+        // Reemplaza 1234 por una que no esté apareciendo
+        /*
+    $ordenId = 1234;
+    $bloqueos = DB::table('orden_etapas as oe')
+        ->join('etapa_produccions as ep', 'ep.id', '=', 'oe.etapa_produccion_id')
+        ->where('oe.orden_produccion_id', $ordenId)
+        ->where('ep.orden', '<', $ordenEtapa)
+        ->whereIn(DB::raw('LOWER(oe.estado)'), ['pendiente','en_proceso'])
+        ->get(['oe.id','oe.estado','ep.nombre','ep.orden']);
+    Log::info('[Impresiones] Bloqueos previos', $bloqueos->toArray());
+    */
 
         $impresiones = Impresion::with('orden')->latest()->get();
 
