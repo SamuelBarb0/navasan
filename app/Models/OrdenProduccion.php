@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrdenProduccion extends Model
 {
@@ -67,26 +68,36 @@ class OrdenProduccion extends Model
         return $this->hasMany(\App\Models\Suajes::class, 'orden_id');
     }
 
-    public static function ordenesListasParaEtapa($nombreEtapa)
+    public static function ordenesListasParaEtapa(string $nombreEtapa)
     {
-        $etapaTarget = \App\Models\EtapaProduccion::where('nombre', $nombreEtapa)->first();
+        // Normaliza el nombre (sin tildes) y busca por ambas variantes
+        $nombreNormalizado = Str::ascii($nombreEtapa);
 
-        if (!$etapaTarget) return collect(); // por si no existe
+        $etapaTarget = \App\Models\EtapaProduccion::whereIn('nombre', [
+            $nombreEtapa,          // p.ej. "Impresión"
+            $nombreNormalizado,    // p.ej. "Impresion"
+        ])->first();
+
+        if (!$etapaTarget) {
+            return collect(); // no existe la etapa solicitada
+        }
 
         $etapaOrden = $etapaTarget->orden;
 
-        return self::whereHas('etapas', function ($q) use ($etapaTarget, $etapaOrden) {
+        return self::whereHas('etapas', function ($q) use ($etapaTarget) {
             $q->where('etapa_produccion_id', $etapaTarget->id)
-                ->where('estado', 'pendiente')
-                ->whereNotExists(function ($subquery) use ($etapaOrden) {
-                    $subquery->select(DB::raw(1))
-                        ->from('orden_etapas as anteriores')
-                        ->join('etapa_produccions as ep2', 'anteriores.etapa_produccion_id', '=', 'ep2.id')
-                        ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
-                        ->where('ep2.orden', '<', $etapaOrden)
-                        ->whereIn('anteriores.estado', ['pendiente', 'en_proceso']);
-                });
+                // aceptar pendiente o en_proceso (case-insensitive)
+                ->whereIn(DB::raw('LOWER(estado)'), ['pendiente', 'en_proceso']);
         })
+            // ninguna etapa anterior puede estar pendiente o en_proceso
+            ->whereNotExists(function ($subquery) use ($etapaOrden) {
+                $subquery->select(DB::raw(1))
+                    ->from('orden_etapas as anteriores')
+                    ->join('etapa_produccions as ep2', 'anteriores.etapa_produccion_id', '=', 'ep2.id')
+                    ->whereColumn('anteriores.orden_produccion_id', 'orden_etapas.orden_produccion_id')
+                    ->where('ep2.orden', '<', $etapaOrden)
+                    ->whereIn(DB::raw('LOWER(anteriores.estado)'), ['pendiente', 'en_proceso']);
+            })
             ->latest()
             ->take(10)
             ->get();
