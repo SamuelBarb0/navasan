@@ -68,7 +68,7 @@ class OrdenProduccion extends Model
         return $this->hasMany(\App\Models\Suajes::class, 'orden_id');
     }
 
-    ublic static function ordenesListasParaEtapa(string $nombreEtapa)
+    public static function ordenesListasParaEtapa(string $nombreEtapa)
 {
     $nombreNormalizado = Str::ascii($nombreEtapa);
 
