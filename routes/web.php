@@ -293,4 +293,5 @@ Route::post('/toasts/impresion/diff/clear', function (Request $r) {
     }
     return back();
 })->middleware('auth')->name('toasts.impresion.diff.clear');
+
 require __DIR__ . '/auth.php';
