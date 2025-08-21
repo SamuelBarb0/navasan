@@ -35,8 +35,6 @@
         </main>
     </div>
 
-    <x-toasts.impresiones-pendientes />
-    <x-toasts.alertas-impresion />
     <x-toasts.revision-pendiente />
     <x-toasts.suaje-alerta /> {{-- suaje (global/info) --}}
     <x-toasts.suaje-desfase /> {{-- suaje (desfase) --}}
