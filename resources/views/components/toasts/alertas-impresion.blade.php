@@ -52,7 +52,6 @@
 
   </div>
 
-  @push('scripts')
   <script>
   (function(){
     if (!window.__clearToast) {
@@ -87,5 +86,4 @@
     });
   })();
   </script>
-  @endpush
 @endif
