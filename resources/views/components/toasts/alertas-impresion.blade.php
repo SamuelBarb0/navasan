@@ -11,14 +11,13 @@
             ⚠️ La orden <strong>#{{ $o->numero }}</strong> aún no tiene registrada la <strong>fecha de fin de impresión</strong>.
           </div>
 
-          {{-- POST por fetch con firma (sig) + fallback (numero) --}}
+          {{-- Cierre vía fetch con firma (sig) + fallback (numero) --}}
           <button type="button"
                   class="btn-close btn-close-white me-2 m-auto"
                   aria-label="Cerrar"
                   data-clear-url="{{ route('toasts.impresion.fin.clear') }}"
                   data-payload='@json(["sig" => $o->sig, "numero" => $o->numero])'
-                  onclick="window.__clearToast(this)"
-                  data-bs-dismiss="toast"></button>
+                  onclick="window.__clearToast(this)"></button>
         </div>
       </div>
     @endforeach
@@ -38,52 +37,36 @@
         <div class="d-flex">
           <div class="toast-body">{!! $msg !!}</div>
 
-          {{-- POST por fetch con firma (sig) + fallback (impresion_id) --}}
+          {{-- Cierre vía fetch con firma (sig) + fallback (impresion_id) --}}
           <button type="button"
                   class="btn-close btn-close-white me-2 m-auto"
                   aria-label="Cerrar"
                   data-clear-url="{{ route('toasts.impresion.diff.clear') }}"
                   data-payload='@json(["sig" => $d->sig, "impresion_id" => $d->id])'
-                  onclick="window.__clearToast(this)"
-                  data-bs-dismiss="toast"></button>
+                  onclick="window.__clearToast(this)"></button>
         </div>
       </div>
     @endforeach
 
   </div>
-
-  <script>
-  (function(){
-    if (!window.__clearToast) {
-      window.__clearToast = async function(btn) {
-        try {
-          const url = btn.getAttribute('data-clear-url');
-          const payload = JSON.parse(btn.getAttribute('data-payload') || '{}');
-          const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-
-          await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-CSRF-TOKEN': token,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'text/html',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-        } catch(e) {
-          console.warn('No se pudo limpiar el toast en servidor', e);
-        }
-      };
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!(window.bootstrap && bootstrap.Toast)) return;
-      document.querySelectorAll('.toast-auto-show .toast:not(.bs-initialized)').forEach(function (el) {
-        el.classList.add('bs-initialized');
-        bootstrap.Toast.getOrCreateInstance(el).show();
-      });
-    });
-  })();
-  </script>
 @endif
+
+
+<script>
+(function(){
+  // Reutiliza el init global si ya existe
+  if (window.__toastAutoShowInited) return;
+  window.__toastAutoShowInited = true;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!(window.bootstrap && bootstrap.Toast)) return;
+    document.querySelectorAll('.toast-auto-show .toast:not(.bs-initialized)').forEach(function (el) {
+      el.classList.add('bs-initialized');
+      const inst = bootstrap.Toast.getOrCreateInstance(el, { autohide: false });
+      inst.show();
+      el.addEventListener('hidden.bs.toast', function(){ el.remove(); });
+    });
+  });
+})();
+</script>
+

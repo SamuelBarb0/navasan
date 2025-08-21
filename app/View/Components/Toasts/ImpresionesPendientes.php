@@ -5,6 +5,7 @@ namespace App\View\Components\Toasts;
 use App\Models\Impresion;
 use Illuminate\View\Component;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class ImpresionesPendientes extends Component
 {
@@ -12,14 +13,17 @@ class ImpresionesPendientes extends Component
 
     public function __construct()
     {
-        // Solo mostrar si fue solicitado desde la sesión
+        // Muestra solo si la sesión lo solicita
         if (session('mostrar_toast_impresion')) {
             $this->ordenes = Impresion::with('orden')
                 ->whereNull('fin_impresion')
                 ->get()
                 ->pluck('orden.numero_orden')
-                ->filter()
-                ->unique();
+                ->filter()                   // quita null/empty
+                ->unique()                   // evita duplicados
+                // ⬇️ ignora órdenes que ya se limpiaron (ruta fallback guarda esta clave)
+                ->reject(fn ($num) => Cache::get("toast_impresion_fin_cleared:{$num}", false))
+                ->values();                  // reindexa
         } else {
             $this->ordenes = collect();
         }

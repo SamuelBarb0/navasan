@@ -10,52 +10,67 @@
             <a href="{{ route('impresiones.index') }}" class="ms-2 text-white text-decoration-underline">Ir a Impresiones</a>
           </div>
 
-          {{-- Botón que hace POST por fetch (sin <form>) --}}
+          {{-- Cierre vía fetch (marca por número) --}}
           <button type="button"
                   class="btn-close btn-close-white me-2 m-auto"
                   aria-label="Cerrar"
                   data-clear-url="{{ route('toasts.impresion.fin.clear') }}"
                   data-payload='@json(["numero" => $numeroOrden])'
-                  onclick="window.__clearToast(this)"
-                  data-bs-dismiss="toast"></button>
+                  onclick="window.__clearToast(this)"></button>
         </div>
       </div>
     @endforeach
   </div>
+@endif
 
+<script>
+(function(){
+  if (window.__toastInited) return;
+  window.__toastInited = true;
 
-  <script>
-  (function(){
-    if (!window.__clearToast) {
-      window.__clearToast = async function(btn) {
-        try {
-          const url = btn.getAttribute('data-clear-url');
-          const payload = JSON.parse(btn.getAttribute('data-payload') || '{}');
-          const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+  // Mostrar todos los .toast al cargar
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!(window.bootstrap && bootstrap.Toast)) return;
+    document.querySelectorAll('.toast:not(.bs-initialized)').forEach(function (el) {
+      el.classList.add('bs-initialized');
+      const inst = bootstrap.Toast.getOrCreateInstance(el, { autohide: false });
+      inst.show();
+      el.addEventListener('hidden.bs.toast', function(){ el.remove(); });
+    });
+  });
 
-          await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-CSRF-TOKEN': token,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'text/html',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-        } catch(e) {
-          console.warn('No se pudo limpiar el toast en servidor', e);
-        }
-      };
+  // Función global de cierre y limpieza en servidor
+  window.__clearToast = async function(btn) {
+    const toastEl = btn.closest('.toast');
+    try {
+      if (window.bootstrap && bootstrap.Toast) {
+        bootstrap.Toast.getOrCreateInstance(toastEl).hide();
+      } else {
+        toastEl.style.display = 'none';
+      }
+    } catch (_) {
+      toastEl.style.display = 'none';
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!(window.bootstrap && bootstrap.Toast)) return;
-      document.querySelectorAll('.toast').forEach(function (el) {
-        bootstrap.Toast.getOrCreateInstance(el).show();
-      });
-    });
-  })();
-  </script>
+    try {
+      const url = btn.getAttribute('data-clear-url');
+      const payload = JSON.parse(btn.getAttribute('data-payload') || '{}');
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
-@endif
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': token,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'text/html',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn('No se pudo limpiar el toast en servidor:', e);
+    }
+  };
+})();
+</script>
+
