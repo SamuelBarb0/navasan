@@ -46,7 +46,8 @@
 
     <x-toasts.suaje-alerta tipo="empalmado" /> {{-- empalmado (global/info) --}}
     <x-toasts.suaje-desfase tipo="empalmado" /> {{-- empalmado (desfase) --}}
-
+    <x-toasts.suaje-alerta tipo="impresion" />   {{-- impresión (global/info) --}}
+<x-toasts.suaje-desfase tipo="impresion" />  {{-- impresión (desfase) --}}
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])

@@ -200,18 +200,15 @@ Route::prefix('empalmado')->name('empalmado.')->group(function () {
     Route::delete('/{id}', [AcabadoController::class, 'destroy'])->name('destroy'); // 👈 nuevo
 });
 
-
-
-// Setear aviso (global o desfase) para suaje | laminado | empalmado
+// Setear aviso (global o desfase) para suaje | laminado | empalmado | impresion
 Route::post('/toasts/{tipo}/{scope}/set', function (Request $r, string $tipo, string $scope) {
-    $tipos  = ['suaje','laminado','empalmado'];
+    $tipos  = ['suaje','laminado','empalmado','impresion']; // 👈 agregado impresion
     $scopes = ['global','desfase'];
 
     if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
         abort(404);
     }
 
-    // Mensaje por defecto amigable
     $porDefecto = $scope === 'desfase'
         ? "⚠ Desfase en " . ucfirst($tipo)
         : "⚠ Aviso global de " . $tipo;
@@ -227,7 +224,7 @@ Route::post('/toasts/{tipo}/{scope}/set', function (Request $r, string $tipo, st
 })->name('toasts.set');
 
 Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scope) {
-    $tipos  = ['suaje','laminado','empalmado'];
+    $tipos  = ['suaje','laminado','empalmado','impresion']; // 👈 agregado impresion
     $scopes = ['global','desfase'];
 
     if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
@@ -237,7 +234,7 @@ Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scop
     // Si no es admin, no tocar cache y solo recargar
     $user = request()->user();
     if (!$user || !$user->hasRole('administrador')) {
-        return back(); // recarga sin cambios
+        return back();
     }
 
     $key = $scope === 'desfase'
@@ -246,7 +243,8 @@ Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scop
 
     \Illuminate\Support\Facades\Cache::forget($key);
     return back()->with('success', 'Alerta cerrada.');
-})->name('toasts.clear'); 
+})->name('toasts.clear');
+
 
 Route::get('/ordenes/{orden}/items-json', [AcabadoController::class, 'productosPorOrden'])
     ->whereNumber('orden')
@@ -268,30 +266,5 @@ Route::post('/revisiones/limpiar-toast', function () {
     return response()->noContent();
 })->name('revisiones.limpiar.toast')->middleware('web');
 
-
-Route::post('/toasts/impresion/fin/clear', function (Request $r) {
-    if ($sig = $r->input('sig')) {
-        Cache::forever("toast_cleared:{$sig}", true);
-    } else {
-        // Fallback a tu lógica anterior
-        $numero = (string) $r->input('numero');
-        if ($numero !== '') {
-            Cache::forever("toast_impresion_fin_cleared:{$numero}", true);
-        }
-    }
-    return back();
-})->middleware('auth')->name('toasts.impresion.fin.clear');
-
-Route::post('/toasts/impresion/diff/clear', function (Request $r) {
-    if ($sig = $r->input('sig')) {
-        Cache::forever("toast_cleared:{$sig}", true);
-    } else {
-        $id = (int) $r->input('impresion_id');
-        if ($id > 0) {
-            Cache::forever("toast_impresion_diff_cleared:{$id}", true);
-        }
-    }
-    return back();
-})->middleware('auth')->name('toasts.impresion.diff.clear');
 
 require __DIR__ . '/auth.php';

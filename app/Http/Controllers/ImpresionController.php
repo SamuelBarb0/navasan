@@ -8,6 +8,7 @@ use App\Models\EtapaProduccion;
 use App\Models\OrdenProduccion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class ImpresionController extends Controller
 {
@@ -59,19 +60,6 @@ class ImpresionController extends Controller
             'ids'   => $ordenes->pluck('id')->all(),
         ]);
 
-        // 4) (Opcional) inspección de bloqueos para una orden que esperes ver
-        // Reemplaza 1234 por una que no esté apareciendo
-        /*
-    $ordenId = 1234;
-    $bloqueos = DB::table('orden_etapas as oe')
-        ->join('etapa_produccions as ep', 'ep.id', '=', 'oe.etapa_produccion_id')
-        ->where('oe.orden_produccion_id', $ordenId)
-        ->where('ep.orden', '<', $ordenEtapa)
-        ->whereIn(DB::raw('LOWER(oe.estado)'), ['pendiente','en_proceso'])
-        ->get(['oe.id','oe.estado','ep.nombre','ep.orden']);
-    Log::info('[Impresiones] Bloqueos previos', $bloqueos->toArray());
-    */
-
         $impresiones = Impresion::with('orden')->latest()->get();
 
         return view('impresiones.index', compact('impresiones', 'ordenes'));
@@ -99,9 +87,15 @@ class ImpresionController extends Controller
                 ->withInput();
         }
 
-        Impresion::create($request->all());
+        // Crear e inmediatamente evaluar avisos globales (misma lógica que Acabados)
+        $imp = Impresion::create($request->all());
 
-        return redirect()->back()->with('success', 'Registro de impresión guardado.');
+        $warnDesfase = $this->dispararDesfaseImpresionSiAplica($imp);
+        $warnFaltaFin = $this->dispararFaltaFinImpresionSiAplica($imp);
+
+        return redirect()->back()
+            ->with('success', 'Registro de impresión guardado.')
+            ->with('warning_extra', $warnDesfase ?? $warnFaltaFin);
     }
 
     public function update(Request $request, $id)
@@ -139,10 +133,17 @@ class ImpresionController extends Controller
             }
         }
 
-        if ($mensajeExtra) {
+        // Disparar toasts globales como en Acabados
+        $warnDesfase = $this->dispararDesfaseImpresionSiAplica($impresion);
+        $warnFaltaFin = $this->dispararFaltaFinImpresionSiAplica($impresion);
+
+        if ($mensajeExtra || $warnDesfase || $warnFaltaFin) {
+            $combined = collect([$mensajeExtra, $warnDesfase, $warnFaltaFin])
+                ->filter()
+                ->implode('<br>');
             return redirect()->back()
                 ->with('success', 'Impresión actualizada correctamente.')
-                ->with('warning_extra', $mensajeExtra);
+                ->with('warning_extra', $combined);
         }
 
         return redirect()->back()->with('success', 'Impresión actualizada correctamente.');
@@ -160,5 +161,45 @@ class ImpresionController extends Controller
                 'delete' => 'No se pudo eliminar el registro.'
             ]);
         }
+    }
+
+    /**
+     * Desfase global para Impresión (mismo patrón que Acabados):
+     * Compara cantidad solicitada (cantidad_pliegos) vs cantidad impresa (cantidad_pliegos_impresos).
+     * Si hay diferencia, setea Cache::forever('toast_impresion_desfase_global', $msg)
+     */
+    private function dispararDesfaseImpresionSiAplica(Impresion $imp): ?string
+    {
+        // Planificado vs Real
+        $solicitados = is_null($imp->cantidad_pliegos) ? null : (int) $imp->cantidad_pliegos;
+        $impresos    = is_null($imp->cantidad_pliegos_impresos) ? null : (int) $imp->cantidad_pliegos_impresos;
+
+        if ($solicitados === null || $impresos === null) return null;
+        if ($solicitados === $impresos) return null;
+
+        $ordenTxt = optional($imp->orden)->numero_orden ?? $imp->orden_id ?? $imp->id;
+
+        $msg = $impresos > $solicitados
+            ? "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>mayor</b> que la solicitada ({$impresos} &gt; {$solicitados}). Verificar."
+            : "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>menor</b> que la solicitada ({$impresos} &lt; {$solicitados}). Revisar antes de continuar.";
+
+        Cache::forever('toast_impresion_desfase_global', $msg);
+        return $msg;
+    }
+
+    /**
+     * Aviso global por falta de fin en Impresión (mismo patrón que Acabados):
+     * Si no hay fin_impresion, setea Cache::forever('toast_impresion_global', $msg)
+     */
+    private function dispararFaltaFinImpresionSiAplica(Impresion $imp): ?string
+    {
+        // Criterio simple: siempre que no tenga fin
+        if (!empty($imp->fin_impresion)) return null;
+
+        $ordenTxt = optional($imp->orden)->numero_orden ?? $imp->orden_id ?? $imp->id;
+        $msg = "⚠ <b>Aviso de Impresión</b> – Orden {$ordenTxt}: falta registrar la <b>fecha de fin de impresión</b>.";
+
+        Cache::forever('toast_impresion_global', $msg);
+        return $msg;
     }
 }
