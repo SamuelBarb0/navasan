@@ -168,24 +168,26 @@ class ImpresionController extends Controller
      * Compara cantidad solicitada (cantidad_pliegos) vs cantidad impresa (cantidad_pliegos_impresos).
      * Si hay diferencia, setea Cache::forever('toast_impresion_desfase_global', $msg)
      */
-    private function dispararDesfaseImpresionSiAplica(Impresion $imp): ?string
-    {
-        // Planificado vs Real
-        $solicitados = is_null($imp->cantidad_pliegos) ? null : (int) $imp->cantidad_pliegos;
-        $impresos    = is_null($imp->cantidad_pliegos_impresos) ? null : (int) $imp->cantidad_pliegos_impresos;
+private function dispararDesfaseImpresionSiAplica(Impresion $imp): ?string
+{
+    $solicitados = is_null($imp->cantidad_pliegos) ? null : (int) $imp->cantidad_pliegos;
+    $impresos    = is_null($imp->cantidad_pliegos_impresos) ? null : (int) $imp->cantidad_pliegos_impresos;
 
-        if ($solicitados === null || $impresos === null) return null;
-        if ($solicitados === $impresos) return null;
-
-        $ordenTxt = optional($imp->orden)->numero_orden ?? $imp->orden_id ?? $imp->id;
-
-        $msg = $impresos > $solicitados
-            ? "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>mayor</b> que la solicitada ({$impresos} &gt; {$solicitados}). Verificar."
-            : "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>menor</b> que la solicitada ({$impresos} &lt; {$solicitados}). Revisar antes de continuar.";
-
-        Cache::forever('toast_impresion_desfase_global', $msg);
-        return $msg;
+    if ($solicitados === null || $impresos === null || $solicitados === $impresos) {
+        Cache::forget('toast_impresion_desfase_global');
+        return null;
     }
+
+    $ordenTxt = optional($imp->orden)->numero_orden ?? $imp->orden_id ?? $imp->id;
+
+    $msg = $impresos > $solicitados
+        ? "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>mayor</b> que la solicitada ({$impresos} &gt; {$solicitados}). Verificar."
+        : "⚠ <b>Desfase en Impresión</b> – Orden {$ordenTxt}: la <b>cantidad impresa</b> es <b>menor</b> que la solicitada ({$impresos} &lt; {$solicitados}). Revisar antes de continuar.";
+
+    Cache::forever('toast_impresion_desfase_global', $msg);
+    return $msg;
+}
+
 
     /**
      * Aviso global por falta de fin en Impresión (mismo patrón que Acabados):
@@ -193,8 +195,11 @@ class ImpresionController extends Controller
      */
     private function dispararFaltaFinImpresionSiAplica(Impresion $imp): ?string
     {
-        // Criterio simple: siempre que no tenga fin
-        if (!empty($imp->fin_impresion)) return null;
+        // Si YA tiene fin, limpia el toast y no avises
+        if (!empty($imp->fin_impresion)) {
+            Cache::forget('toast_impresion_global');
+            return null;
+        }
 
         $ordenTxt = optional($imp->orden)->numero_orden ?? $imp->orden_id ?? $imp->id;
         $msg = "⚠ <b>Aviso de Impresión</b> – Orden {$ordenTxt}: falta registrar la <b>fecha de fin de impresión</b>.";
