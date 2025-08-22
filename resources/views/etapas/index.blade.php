@@ -18,6 +18,13 @@
                 </div>
             @endif
 
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
             <table class="table table-striped align-middle">
                 <thead>
                     <tr>
@@ -36,9 +43,25 @@
                             <td>{{ $etapa->orden ?? '-' }}</td>
                             <td>{{ $etapa->responsable?->name ?? 'Sin asignar' }}</td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarEtapa{{ $etapa->id }}">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEditarEtapa{{ $etapa->id }}">
                                     <i class="bi bi-pencil-fill"></i> Editar
                                 </button>
+
+                                {{-- Botón eliminar --}}
+                                <form action="{{ route('etapas.destroy', $etapa) }}"
+                                      method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('¿Eliminar la etapa \"{{ $etapa->nombre }}\"? Esta acción no se puede deshacer.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash3"></i> Eliminar
+                                    </button>
+                                </form>
+
+                                {{-- Modal de edición --}}
                                 @include('etapas.partials.form-edit', ['etapa' => $etapa])
                             </td>
                         </tr>
