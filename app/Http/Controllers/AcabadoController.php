@@ -85,9 +85,24 @@ class AcabadoController extends Controller
         $isSuaje = ($key === 'suaje-corte');
         if (!$isSuaje) $with[] = 'producto';
 
-        $acabados = $model::with($with)->latest()->paginate(20);
+        // Como created_at puede ser NULL, ordena por id
+        $acabados = $model::with($with)->latest('id')->paginate(20);
 
-        $ordenes   = OrdenProduccion::latest()->take(20)->get();
+        // *** Mapeo a nombres EXACTOS de tu tabla etapa_produccions ***
+        $etapaPorKey = [
+            'suaje-corte' => 'Suaje',
+            'laminado'    => 'Laminado Mate / Brillante',
+            'empalmado'   => 'Empalmado',
+        ];
+        $etapaActual = $etapaPorKey[$key] ?? 'Laminado Mate / Brillante';
+
+        // Órdenes listas para la etapa (pendiente / en_proceso y sin anteriores abiertas)
+        $ordenes = OrdenProduccion::with('cliente')
+            ->listasParaEtapa($etapaActual)
+            ->latest('id')
+            ->limit(20)
+            ->get();
+
         $productos = Producto::orderBy('nombre')->take(100)->get();
 
         return view('acabados.index', [
@@ -157,7 +172,7 @@ class AcabadoController extends Controller
         if (Schema::hasColumn($table, 'cantidad_libe')) {
             $extra['cantidad_libe'] = (int) $validated['cantidad_liberada'];
         }
-        foreach (['responsable','operario','hecho_por'] as $legacyName) {
+        foreach (['responsable', 'operario', 'hecho_por'] as $legacyName) {
             if (Schema::hasColumn($table, $legacyName)) {
                 $extra[$legacyName] = $validated['realizado_por'];
                 break;
@@ -262,7 +277,7 @@ class AcabadoController extends Controller
         if (Schema::hasColumn($table, 'cantidad_libe')) {
             $extra['cantidad_libe'] = (int) $validated['cantidad_liberada'];
         }
-        foreach (['responsable','operario','hecho_por'] as $legacyName) {
+        foreach (['responsable', 'operario', 'hecho_por'] as $legacyName) {
             if (Schema::hasColumn($table, $legacyName)) {
                 $extra[$legacyName] = $validated['realizado_por'];
                 break;

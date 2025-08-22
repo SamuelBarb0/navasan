@@ -1,8 +1,12 @@
 @php
     use Illuminate\Support\Facades\Route;
     use Illuminate\Support\Str;
-    $tipo = $tipo ?? Str::beforeLast(Route::currentRouteName(), '.');
+
+    $tipo    = $tipo ?? Str::beforeLast(Route::currentRouteName(), '.');
     $esSuaje = $tipo === 'suaje-corte';
+
+    // bandera para deshabilitar el select si llega vacío
+    $tieneOrdenes = isset($ordenes) && $ordenes->count() > 0;
 @endphp
 
 <!-- Modal Registrar Acabado -->
@@ -20,17 +24,21 @@
                     {{-- Orden --}}
                     <div class="mb-3">
                         <label class="form-label">Orden de Producción</label>
-                        <select name="orden_id" id="create_orden_id" class="form-select" required>
-                            <option value="">Seleccione una orden</option>
-                            @php
-                                $listaOrdenes = ($ordenes ?? \App\Models\OrdenProduccion::latest()->take(10)->get());
-                            @endphp
-                            @foreach($listaOrdenes as $orden)
+                        <select name="orden_id" id="create_orden_id" class="form-select" required {{ $tieneOrdenes ? '' : 'disabled' }}>
+                            <option value="">
+                                {{ $tieneOrdenes ? 'Seleccione una orden' : 'No hay órdenes disponibles para esta etapa' }}
+                            </option>
+                            @forelse($ordenes as $orden)
                                 <option value="{{ $orden->id }}" @selected(old('orden_id') == $orden->id)>
                                     {{ $orden->numero_orden }}
                                 </option>
-                            @endforeach
+                            @empty
+                                {{-- sin opciones si no hay órdenes --}}
+                            @endforelse
                         </select>
+                        @unless($tieneOrdenes)
+                            <small class="text-muted">No hay órdenes en <em>pendiente</em> o <em>en proceso</em> para esta etapa.</small>
+                        @endunless
                     </div>
 
                     @if($esSuaje)
@@ -44,14 +52,14 @@
                         <div class="mb-3">
                             <label class="form-label">Cantidad Final</label>
                             <input type="number" name="cantidad_pliegos_impresos" class="form-control"
-                                   min="0" step="1" value="{{ old('cantidad_pliegos_impresos') }}">
+                                   min="0" step="1" required value="{{ old('cantidad_pliegos_impresos') }}">
                         </div>
                     @else
                         {{-- Producto (según la orden) --}}
                         <div class="mb-3">
                             <label class="form-label">Producto</label>
-                            <select name="producto_id" id="create_producto_id" class="form-select" required>
-                                <option value="">Seleccione primero una orden</option>
+                            <select name="producto_id" id="create_producto_id" class="form-select" required {{ $tieneOrdenes ? '' : 'disabled' }}>
+                                <option value="">{{ $tieneOrdenes ? 'Seleccione primero una orden' : 'Sin órdenes disponibles' }}</option>
                             </select>
                             <small class="text-muted" id="ayudaProductos" style="display:none;">
                                 Mostrando productos de la orden seleccionada.
@@ -63,7 +71,7 @@
                             <label class="form-label">Proceso</label>
                             <select name="proceso" class="form-select" required>
                                 @foreach(($procesos ?? []) as $p)
-                                    <option value="{{ $p }}" @selected(old('proceso') == $p)>
+                                    <option value="{{ $p }}" @selected(old('proceso') == $p)">
                                         {{ \Illuminate\Support\Str::of($p)->replace('_',' ')->title() }}
                                     </option>
                                 @endforeach
@@ -77,7 +85,7 @@
                                    value="{{ old('realizado_por') }}" required>
                         </div>
 
-                        {{-- ✅ SIEMPRE usar Cantidad Recibida en los demás procesos --}}
+                        {{-- Cantidad Recibida --}}
                         <div class="mb-3">
                             <label class="form-label">Cantidad Recibida</label>
                             <input type="number" name="cantidad_liberada" class="form-control"
@@ -110,21 +118,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const prodSel  = document.getElementById('create_producto_id');
     const ayuda    = document.getElementById('ayudaProductos');
 
+    const setDisabled = (el, on) => on ? el.setAttribute('disabled','disabled') : el.removeAttribute('disabled');
+
     const cargarProductosDeOrden = (ordenId) => {
         if (!ordenId) {
             prodSel.innerHTML = '<option value="">Seleccione primero una orden</option>';
+            setDisabled(prodSel, true);
             ayuda.style.display = 'none';
             return;
         }
 
         prodSel.innerHTML = '<option value="">Cargando productos...</option>';
+        setDisabled(prodSel, true);
 
         fetch(`/ordenes/${ordenId}/items-json`)
             .then(r => r.json())
             .then(items => {
                 let options = '<option value="">Seleccione un producto</option>';
                 (items || []).forEach(it => {
-                    const pid = it.producto_id ?? it.id;
+                    const pid  = it.producto_id ?? it.id;
                     const pnom = it.producto_nombre ?? it.nombre ?? `Producto ${pid}`;
                     options += `<option value="${pid}">${pnom}</option>`;
                 });
@@ -133,21 +145,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const oldProd = @json(old('producto_id'));
                 if (oldProd) prodSel.value = oldProd;
 
+                setDisabled(prodSel, false);
                 ayuda.style.display = 'inline';
             })
             .catch(() => {
                 prodSel.innerHTML = '<option value="">Error al cargar productos</option>';
+                setDisabled(prodSel, true);
                 ayuda.style.display = 'none';
             });
     };
 
-    const oldOrden = @json(old('orden_id'));
-    if (oldOrden) {
-        ordenSel.value = oldOrden;
-        cargarProductosDeOrden(oldOrden);
+    // Si vienen órdenes, habilita el flujo
+    const hayOrdenes = {{ $tieneOrdenes ? 'true' : 'false' }};
+    if (hayOrdenes) {
+        const oldOrden = @json(old('orden_id'));
+        if (oldOrden) {
+            ordenSel.value = oldOrden;
+            cargarProductosDeOrden(oldOrden);
+        }
+        ordenSel.addEventListener('change', e => cargarProductosDeOrden(e.target.value));
     }
-
-    ordenSel.addEventListener('change', e => cargarProductosDeOrden(e.target.value));
 });
 </script>
 @endif
