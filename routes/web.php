@@ -202,7 +202,7 @@ Route::prefix('empalmado')->name('empalmado.')->group(function () {
 
 // Setear aviso (global o desfase) para suaje | laminado | empalmado | impresion
 Route::post('/toasts/{tipo}/{scope}/set', function (Request $r, string $tipo, string $scope) {
-    $tipos  = ['suaje','laminado','empalmado','impresion']; // 👈 agregado impresion
+    $tipos  = ['suaje','laminado','empalmado','impresion'];
     $scopes = ['global','desfase'];
 
     if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
@@ -213,18 +213,21 @@ Route::post('/toasts/{tipo}/{scope}/set', function (Request $r, string $tipo, st
         ? "⚠ Desfase en " . ucfirst($tipo)
         : "⚠ Aviso global de " . $tipo;
 
-    $msg = (string) $r->input('message', $porDefecto);
+    // Permite HTML porque lo renderizas con {!! ... !!}
+    $msg = (string) ($r->input('message', $porDefecto));
 
     $key = $scope === 'desfase'
         ? "toast_{$tipo}_desfase_global"
         : "toast_{$tipo}_global";
 
     Cache::forever($key, $msg);
-    return back();
+
+    return back()->with('success', 'Alerta configurada.');
 })->name('toasts.set');
 
-Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scope) {
-    $tipos  = ['suaje','laminado','empalmado','impresion']; // 👈 agregado impresion
+// Limpiar aviso (global o desfase)
+Route::post('/toasts/{tipo}/{scope}/clear', function (Request $r, string $tipo, string $scope) {
+    $tipos  = ['suaje','laminado','empalmado','impresion'];
     $scopes = ['global','desfase'];
 
     if (!in_array($tipo, $tipos, true) || !in_array($scope, $scopes, true)) {
@@ -232,19 +235,19 @@ Route::post('/toasts/{tipo}/{scope}/clear', function (string $tipo, string $scop
     }
 
     // Si no es admin, no tocar cache y solo recargar
-    $user = request()->user();
+    $user = $r->user();
     if (!$user || !$user->hasRole('administrador')) {
-        return back();
+        return back()->with('info', 'Solo un administrador puede cerrar avisos globales.');
     }
 
     $key = $scope === 'desfase'
         ? "toast_{$tipo}_desfase_global"
         : "toast_{$tipo}_global";
 
-    \Illuminate\Support\Facades\Cache::forget($key);
+    Cache::forget($key);
+
     return back()->with('success', 'Alerta cerrada.');
 })->name('toasts.clear');
-
 
 Route::get('/ordenes/{orden}/items-json', [AcabadoController::class, 'productosPorOrden'])
     ->whereNumber('orden')
